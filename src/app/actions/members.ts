@@ -8,7 +8,11 @@ import { newId } from "@/lib/ids";
 import type { Role } from "@/lib/types";
 import type { ActionResult } from "./auth";
 
-const VALID_ROLES: Role[] = ["viewer", "member", "admin", "owner"];
+// Deliberately excludes "owner" — an admin adding a member must never be
+// able to grant ownership of the org (that would be a privilege escalation
+// from admin to owner). Ownership only exists via org creation or
+// changeMemberRoleAction, which is itself owner-only.
+const ADDABLE_ROLES: Role[] = ["viewer", "member", "admin"];
 
 /**
  * Adds an existing LaunchPilot user (by email) to the current org. Since
@@ -23,7 +27,7 @@ export async function addMemberAction(formData: FormData): Promise<ActionResult>
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "member") as Role;
   if (!email) return { ok: false, error: "Email is required" };
-  if (!VALID_ROLES.includes(role)) return { ok: false, error: "Invalid role" };
+  if (!ADDABLE_ROLES.includes(role)) return { ok: false, error: "Invalid role" };
 
   const result = await mutateDb((db) => {
     const user = db.users.find((u) => u.email.toLowerCase() === email);
@@ -74,6 +78,14 @@ export async function changeMemberRoleAction(
   const result = await mutateDb((db) => {
     const membership = db.memberships.find((m) => m.id === membershipId && m.orgId === ctx.org.id);
     if (!membership) return { ok: false as const, error: "Member not found" };
+
+    if (membership.role === "owner" && role !== "owner") {
+      const ownerCount = db.memberships.filter((m) => m.orgId === ctx.org.id && m.role === "owner").length;
+      if (ownerCount <= 1) {
+        return { ok: false as const, error: "An organization must always have at least one owner" };
+      }
+    }
+
     const before = membership.role;
     membership.role = role;
 

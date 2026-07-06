@@ -37,6 +37,33 @@ test("before/after are serialized as JSON so state transitions are inspectable",
   assert.match(csv, /"\{""killSwitch"":true\}"/);
 });
 
+test("fields starting with formula-trigger characters are neutralized against CSV injection", () => {
+  for (const payload of ["=cmd|'/c calc'!A1", "+1+1", "-2+3", "@SUM(A1)", "\tformula"]) {
+    const csv = auditLogToCsv([entry({ actorName: payload })]);
+    const dataLine = csv.split("\r\n")[1];
+    // The raw field must never begin with a formula-trigger character —
+    // a leading single quote forces spreadsheet apps to read it as text.
+    // (None of these payloads contain a comma/quote/newline, so the field
+    // isn't additionally CSV-quoted — that's exercised separately below.)
+    assert.ok(
+      dataLine.startsWith(`2026-01-01T00:00:00.000Z,'${payload}`),
+      `expected neutralized prefix for ${JSON.stringify(payload)}, got: ${dataLine}`
+    );
+  }
+});
+
+test("a formula-trigger value that also needs CSV quoting gets both protections", () => {
+  const csv = auditLogToCsv([entry({ actorName: '=HYPERLINK("evil.com","click"),extra' })]);
+  const dataLine = csv.split("\r\n")[1];
+  assert.ok(dataLine.startsWith(`2026-01-01T00:00:00.000Z,"'=HYPERLINK(""evil.com""`));
+});
+
+test("ordinary text fields are not prefixed or quoted unnecessarily", () => {
+  const csv = auditLogToCsv([entry({ actorName: "Ada Lovelace" })]);
+  const dataLine = csv.split("\r\n")[1];
+  assert.ok(dataLine.startsWith("2026-01-01T00:00:00.000Z,Ada Lovelace,"));
+});
+
 test("empty entry list still produces a header-only CSV", () => {
   const csv = auditLogToCsv([]);
   assert.equal(csv, "Timestamp,Actor,Action,Entity Type,Entity ID,Before,After");

@@ -144,6 +144,16 @@ exported to CSV).
 - Password hashing, session token signing/verification (including
   tamper and expiry rejection), and role-hierarchy checks are covered by
   `src/lib/auth.test.ts`.
+- Adding a member (`addMemberAction`) can only grant viewer/member/admin —
+  never `owner` — even if called directly with arbitrary form data,
+  regardless of what the UI's dropdown offers. Ownership only originates
+  at org creation or via `changeMemberRoleAction`, which is itself
+  owner-only and refuses to demote the last remaining owner.
+- CSV exports (`src/lib/exports.ts`) neutralize formula/CSV injection:
+  any field beginning with `=`, `+`, `-`, `@`, tab, or CR is prefixed with
+  a leading `'` before RFC 4180 quoting, since actor names, flag
+  names/descriptions, and targeting-rule values are all user-controlled
+  text that ends up in an exported report a reviewer may open in Excel.
 
 ## Known limitations of the standalone mode
 
