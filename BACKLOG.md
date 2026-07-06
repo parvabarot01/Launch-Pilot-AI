@@ -32,7 +32,7 @@ theme for traceability, all shipped in this pass unless noted.
 - [x] Risk scoring per flag rollout
 - [x] Executive Dashboard: active experiments, recent rollouts, risk-scored release calendar
 - [x] PM docs: GTM_STRATEGY, PRICING_STRATEGY, final EXECUTIVE_SUMMARY, NORTH_STAR_METRIC
-- [ ] Compliance/change-log report as a distinct exportable doc — deferred, the audit log page covers the underlying data but there's no export/report generation yet
+- [x] Compliance/change-log report — CSV export of the audit log (`/api/audit-log/export`), filterable by action and entity type, same filters exposed as dropdowns on the Audit Log page
 - [x] Automated test coverage on core logic — significance engine, flag evaluation (kill switch, targeting rules, deterministic bucketing), governance risk scoring. `npm test` (Node's built-in test runner via `tsx`, no new test framework dependency). UI/integration flows still untested — see ROADMAP.md V1.
 - [ ] Error tracking — deferred, requires connecting a third-party service
 

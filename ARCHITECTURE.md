@@ -95,6 +95,13 @@ that actually mutates the rollout percentage in that case, and only for
 admin/owner roles. Every rollout mutation (approved or direct) snapshots
 the prior state to `rollbackSnapshots` first.
 
+Compliance/change-log report: `GET /api/audit-log/export`
+(`src/app/api/audit-log/export/route.ts`) — session-authenticated (same
+access level as the Audit Log page), streams the org's audit log as CSV,
+optionally filtered by `?action=` / `?entityType=` query params. The CSV
+formatting and filtering are pure functions in `src/lib/exports.ts`
+(unit-tested independently of the route handler).
+
 ## AI assistant design
 
 `src/lib/ai.ts` builds a grounding context from the org's real flags and

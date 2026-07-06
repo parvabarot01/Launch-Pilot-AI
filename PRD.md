@@ -63,6 +63,8 @@ answer "is this safe to ship."
 - Approve/reject workflow with full audit trail
 - One-click rollback, independent of the approval workflow, for any past
   state
+- Compliance/change-log report: filterable, exportable CSV of the audit
+  log (by action, by entity type)
 
 ### Executive rollup
 - Active flags / running experiments / pending approvals / ready-to-ship
