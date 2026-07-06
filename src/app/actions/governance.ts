@@ -2,17 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { mutateDb } from "@/lib/db";
-import { requireViewerContext, requireRole } from "@/lib/context";
+import { requireViewerContext, requireRole, type ViewerContext } from "@/lib/context";
 import { appendAudit } from "@/lib/audit";
 import { newId } from "@/lib/ids";
 import type { ActionResult } from "./auth";
 
-export async function decideApprovalAction(
+export async function decideApprovalCore(
+  ctx: ViewerContext,
   approvalId: string,
   decision: "approved" | "rejected"
 ): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
   if (!requireRole(ctx, "admin")) {
     return { ok: false, error: "Only admins or owners can review rollout approvals" };
   }
@@ -22,7 +21,7 @@ export async function decideApprovalAction(
     return { ok: false, error: "Invalid decision" };
   }
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     const approval = db.approvals.find((a) => a.id === approvalId && a.orgId === ctx.org.id);
     if (!approval) return { ok: false as const, error: "Approval request not found" };
     if (approval.status !== "pending") {
@@ -65,6 +64,16 @@ export async function decideApprovalAction(
 
     return { ok: true as const };
   });
+}
+
+export async function decideApprovalAction(
+  approvalId: string,
+  decision: "approved" | "rejected"
+): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await decideApprovalCore(ctx, approvalId, decision);
 
   revalidatePath("/dashboard/governance");
   revalidatePath("/dashboard/flags");

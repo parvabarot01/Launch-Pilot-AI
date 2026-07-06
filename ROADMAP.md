@@ -20,9 +20,16 @@
 - Connect Groq for the AI assistant in production
 - Emailed invites (replacing direct-add-by-email)
 - CI/CD to Vercel, error tracking
-- Integration/UI test coverage (current suite covers core logic — stats
-  engine, flag evaluation, governance risk scoring — but not
-  Server Actions or rendered pages)
+- UI/rendered-page test coverage (current suite covers core logic *and*
+  Server Actions — 95 tests — but not the React components/pages
+  themselves; would need a browser-based test runner)
+- Unit tests for the `cache.ts`/`ratelimit.ts` in-memory adapters
+  specifically (covered manually via live browser testing, not yet
+  automated)
+- Emailed-invite flow (invite tokens, accept-invite page, expiry) —
+  needs both an email provider connection and the invite-flow logic
+  itself; currently members are added directly by email to an existing
+  account
 - Multi-instance-safe evaluation path (current in-memory cache/rate-limit
   only works correctly on a single instance)
 

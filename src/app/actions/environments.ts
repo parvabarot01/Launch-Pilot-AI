@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { mutateDb } from "@/lib/db";
-import { requireViewerContext, requireRole } from "@/lib/context";
+import { requireViewerContext, requireRole, type ViewerContext } from "@/lib/context";
 import { appendAudit } from "@/lib/audit";
 import { newApiKey } from "@/lib/ids";
 import type { ActionResult } from "./auth";
@@ -13,14 +13,12 @@ import type { ActionResult } from "./auth";
  * updated with the new key. Admin/owner only since this can break a live
  * integration.
  */
-export async function regenerateApiKeyAction(environmentId: string): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
+export async function regenerateApiKeyCore(ctx: ViewerContext, environmentId: string): Promise<ActionResult> {
   if (!requireRole(ctx, "admin")) {
     return { ok: false, error: "Only admins or owners can rotate API keys" };
   }
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     const environment = db.environments.find((e) => e.id === environmentId && e.orgId === ctx.org.id);
     if (!environment) return { ok: false as const, error: "Environment not found" };
 
@@ -40,6 +38,13 @@ export async function regenerateApiKeyAction(environmentId: string): Promise<Act
 
     return { ok: true as const };
   });
+}
+
+export async function regenerateApiKeyAction(environmentId: string): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await regenerateApiKeyCore(ctx, environmentId);
 
   revalidatePath("/dashboard/settings");
   return result;

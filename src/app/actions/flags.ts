@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { mutateDb } from "@/lib/db";
-import { requireViewerContext, requireRole } from "@/lib/context";
+import { requireViewerContext, requireRole, type ViewerContext } from "@/lib/context";
 import { newId } from "@/lib/ids";
 import { appendAudit } from "@/lib/audit";
 import { computeRiskScore, requiresApproval } from "@/lib/governance";
@@ -11,23 +11,31 @@ import type { FlagEnvironmentState, TargetingRule } from "@/lib/types";
 import type { ActionResult } from "./auth";
 import { z } from "zod";
 
-export async function createFlagAction(formData: FormData): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
+/**
+ * Core business logic, factored out from the Server Action wrapper so it
+ * can be unit/integration-tested directly with a constructed ViewerContext
+ * — no Next.js request runtime (cookies/redirect/revalidatePath) involved.
+ * The exported *Action functions below are thin wrappers: resolve ctx,
+ * delegate to *Core, then handle the Next.js-specific side effects.
+ */
+export async function createFlagCore(
+  ctx: ViewerContext,
+  input: { key: unknown; name: unknown; description: unknown }
+): Promise<ActionResult> {
   if (!requireRole(ctx, "member")) return { ok: false, error: "Insufficient permissions" };
 
   const parsed = createFlagSchema.safeParse({
     orgId: ctx.org.id,
-    key: formData.get("key"),
-    name: formData.get("name"),
-    description: formData.get("description") || "",
+    key: input.key,
+    name: input.name,
+    description: input.description || "",
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input" };
   }
   const { key, name, description } = parsed.data;
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     if (db.flags.some((f) => f.orgId === ctx.org.id && f.key === key)) {
       return { ok: false as const, error: "A flag with that key already exists" };
     }
@@ -70,6 +78,17 @@ export async function createFlagAction(formData: FormData): Promise<ActionResult
 
     return { ok: true as const };
   });
+}
+
+export async function createFlagAction(formData: FormData): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await createFlagCore(ctx, {
+    key: formData.get("key"),
+    name: formData.get("name"),
+    description: formData.get("description") || "",
+  });
 
   revalidatePath("/dashboard/flags");
   return result;
@@ -79,19 +98,20 @@ const updateStateFormSchema = updateFlagStateSchema.extend({
   targetingRules: z.array(targetingRuleSchema).optional(),
 });
 
-export async function updateFlagStateAction(
+export interface UpdateFlagStateInput {
+  environmentId: string;
+  enabled?: boolean;
+  killSwitch?: boolean;
+  rolloutPercentage?: number;
+  targetingRules?: Omit<TargetingRule, "id">[];
+  reason?: string;
+}
+
+export async function updateFlagStateCore(
+  ctx: ViewerContext,
   flagId: string,
-  input: {
-    environmentId: string;
-    enabled?: boolean;
-    killSwitch?: boolean;
-    rolloutPercentage?: number;
-    targetingRules?: Omit<TargetingRule, "id">[];
-    reason?: string;
-  }
+  input: UpdateFlagStateInput
 ): Promise<ActionResult & { approvalRequested?: boolean }> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
   if (!requireRole(ctx, "member")) return { ok: false, error: "Insufficient permissions" };
 
   const parsed = updateStateFormSchema.safeParse(input);
@@ -100,7 +120,7 @@ export async function updateFlagStateAction(
   }
   const data = parsed.data;
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     const flag = db.flags.find((f) => f.id === flagId && f.orgId === ctx.org.id);
     if (!flag) return { ok: false as const, error: "Flag not found" };
 
@@ -223,15 +243,23 @@ export async function updateFlagStateAction(
 
     return { ok: true as const };
   });
+}
+
+export async function updateFlagStateAction(
+  flagId: string,
+  input: UpdateFlagStateInput
+): Promise<ActionResult & { approvalRequested?: boolean }> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await updateFlagStateCore(ctx, flagId, input);
 
   revalidatePath(`/dashboard/flags/${flagId}`);
   revalidatePath("/dashboard/flags");
   return result;
 }
 
-export async function archiveFlagAction(flagId: string): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
+export async function archiveFlagCore(ctx: ViewerContext, flagId: string): Promise<ActionResult> {
   if (!requireRole(ctx, "admin")) return { ok: false, error: "Insufficient permissions" };
 
   await mutateDb((db) => {
@@ -250,16 +278,23 @@ export async function archiveFlagAction(flagId: string): Promise<ActionResult> {
     });
   });
 
-  revalidatePath("/dashboard/flags");
   return { ok: true };
 }
 
-export async function rollbackFlagAction(snapshotId: string): Promise<ActionResult> {
+export async function archiveFlagAction(flagId: string): Promise<ActionResult> {
   const ctx = requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await archiveFlagCore(ctx, flagId);
+
+  revalidatePath("/dashboard/flags");
+  return result;
+}
+
+export async function rollbackFlagCore(ctx: ViewerContext, snapshotId: string): Promise<ActionResult> {
   if (!requireRole(ctx, "admin")) return { ok: false, error: "Insufficient permissions" };
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     const snapshot = db.rollbackSnapshots.find((s) => s.id === snapshotId);
     if (!snapshot) return { ok: false as const, error: "Snapshot not found" };
     const flag = db.flags.find((f) => f.id === snapshot.flagId && f.orgId === ctx.org.id);
@@ -288,6 +323,13 @@ export async function rollbackFlagAction(snapshotId: string): Promise<ActionResu
 
     return { ok: true as const };
   });
+}
+
+export async function rollbackFlagAction(snapshotId: string): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await rollbackFlagCore(ctx, snapshotId);
 
   revalidatePath("/dashboard/flags", "layout");
   return result;

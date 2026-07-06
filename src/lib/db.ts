@@ -11,8 +11,13 @@ import type { Database } from "./types";
  * working unmodified since they only depend on this module's exports.
  */
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const DB_FILE = path.join(DATA_DIR, "db.json");
+// Resolved fresh on every call (not cached at module load) so tests can
+// point LP_DB_PATH at an isolated temp file per test — see
+// src/lib/testFixtures.ts. Production/dev always fall through to the
+// default .data/db.json.
+function getDbFile(): string {
+  return process.env.LP_DB_PATH || path.join(process.cwd(), ".data", "db.json");
+}
 
 function emptyDb(): Database {
   return {
@@ -29,12 +34,13 @@ function emptyDb(): Database {
   };
 }
 
-function ensureFile(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+function ensureFile(dbFile: string): void {
+  const dataDir = path.dirname(dbFile);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
-  if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(emptyDb(), null, 2), "utf-8");
+  if (!fs.existsSync(dbFile)) {
+    fs.writeFileSync(dbFile, JSON.stringify(emptyDb(), null, 2), "utf-8");
   }
 }
 
@@ -44,17 +50,19 @@ function ensureFile(): void {
 let writeChain: Promise<unknown> = Promise.resolve();
 
 export function readDb(): Database {
-  ensureFile();
-  const raw = fs.readFileSync(DB_FILE, "utf-8");
+  const dbFile = getDbFile();
+  ensureFile(dbFile);
+  const raw = fs.readFileSync(dbFile, "utf-8");
   return JSON.parse(raw) as Database;
 }
 
 export function mutateDb<T>(fn: (db: Database) => T): Promise<T> {
+  const dbFile = getDbFile();
   const task = writeChain.then(() => {
-    ensureFile();
+    ensureFile(dbFile);
     const db = readDb();
     const result = fn(db);
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
+    fs.writeFileSync(dbFile, JSON.stringify(db, null, 2), "utf-8");
     return result;
   });
   // Swallow so a failed mutation doesn't poison the chain for future calls.

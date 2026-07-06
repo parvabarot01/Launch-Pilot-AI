@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { mutateDb } from "@/lib/db";
-import { requireViewerContext, requireRole } from "@/lib/context";
+import { requireViewerContext, requireRole, type ViewerContext } from "@/lib/context";
 import { appendAudit } from "@/lib/audit";
 import { newId } from "@/lib/ids";
 import type { Role } from "@/lib/types";
@@ -20,17 +20,18 @@ const ALL_ROLES: Role[] = ["viewer", "member", "admin", "owner"];
  * there's no connected email service yet, invites are direct adds rather
  * than emailed invite links — swap point noted in ARCHITECTURE.md.
  */
-export async function addMemberAction(formData: FormData): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
+export async function addMemberCore(
+  ctx: ViewerContext,
+  input: { email: string; role: string }
+): Promise<ActionResult> {
   if (!requireRole(ctx, "admin")) return { ok: false, error: "Insufficient permissions" };
 
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const role = String(formData.get("role") ?? "member") as Role;
+  const email = input.email.trim().toLowerCase();
+  const role = input.role as Role;
   if (!email) return { ok: false, error: "Email is required" };
   if (!ADDABLE_ROLES.includes(role)) return { ok: false, error: "Invalid role" };
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     const user = db.users.find((u) => u.email.toLowerCase() === email);
     if (!user) {
       return {
@@ -63,24 +64,33 @@ export async function addMemberAction(formData: FormData): Promise<ActionResult>
 
     return { ok: true as const };
   });
+}
+
+export async function addMemberAction(formData: FormData): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await addMemberCore(ctx, {
+    email: String(formData.get("email") ?? ""),
+    role: String(formData.get("role") ?? "member"),
+  });
 
   revalidatePath("/dashboard/settings");
   return result;
 }
 
-export async function changeMemberRoleAction(
+export async function changeMemberRoleCore(
+  ctx: ViewerContext,
   membershipId: string,
   role: Role
 ): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
   if (!requireRole(ctx, "owner")) return { ok: false, error: "Only the org owner can change roles" };
   // Server Actions are callable directly at runtime, where TypeScript's
   // `Role` type offers no protection — validate the value actually is one
   // of the four real roles rather than trusting the parameter type.
   if (!ALL_ROLES.includes(role)) return { ok: false, error: "Invalid role" };
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     const membership = db.memberships.find((m) => m.id === membershipId && m.orgId === ctx.org.id);
     if (!membership) return { ok: false as const, error: "Member not found" };
 
@@ -107,6 +117,13 @@ export async function changeMemberRoleAction(
 
     return { ok: true as const };
   });
+}
+
+export async function changeMemberRoleAction(membershipId: string, role: Role): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await changeMemberRoleCore(ctx, membershipId, role);
 
   revalidatePath("/dashboard/settings");
   return result;

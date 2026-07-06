@@ -37,6 +37,8 @@ theme for traceability, all shipped in this pass unless noted.
 - [x] API key rotation — regenerate an environment's key from Settings (admin/owner only), old key invalidated immediately, rotation audited
 - [x] Login brute-force protection — 5 failed attempts per email locks that email out for 15 minutes (`src/lib/loginThrottle.ts`)
 - [x] Fixed a critical leak: every environment's live API key was being sent to every signed-in org member's browser on every dashboard page (not just Settings), via the dashboard layout's environment switcher passing full `Environment` records to a client component. Also added role-gating so only member+ (not viewer) ever receives the real key at all. See ARCHITECTURE.md "Server/Client component boundary."
+- [x] Integration test coverage for Server Actions — every action module (`auth`, `flags`, `experiments`, `governance`, `members`, `environments`) was split into a testable `*Core(ctx, ...)` function plus a thin cookie/redirect/revalidate wrapper, and tested against a real isolated temp-file database (not mocks) via `src/lib/testFixtures.ts`. Covers RBAC boundaries, the governance approval threshold, privilege-escalation regression cases, and audit-log correctness. 95 tests total (up from 44).
+- [x] One-page Executive Presentation doc (`EXECUTIVE_PRESENTATION.md`) — explicitly named in the original plan's Sprint 3 PM docs list, distinct from `EXECUTIVE_SUMMARY.md`, never created until now.
 - [ ] Error tracking — deferred, requires connecting a third-party service
 
 ## Front page

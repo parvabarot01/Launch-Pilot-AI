@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { mutateDb } from "@/lib/db";
-import { requireViewerContext, requireRole } from "@/lib/context";
+import { requireViewerContext, requireRole, type ViewerContext } from "@/lib/context";
 import { newId } from "@/lib/ids";
 import { appendAudit } from "@/lib/audit";
 import { createExperimentSchema, recordEventSchema } from "@/lib/validation";
 import type { ActionResult } from "./auth";
 
-export async function createExperimentAction(input: {
+export interface CreateExperimentInput {
   environmentId: string;
   flagId: string | null;
   name: string;
@@ -16,9 +16,12 @@ export async function createExperimentAction(input: {
   successMetric: string;
   minimumSampleSize: number;
   variants: { key: string; name: string; allocationPercentage: number; isControl: boolean }[];
-}): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
+}
+
+export async function createExperimentCore(
+  ctx: ViewerContext,
+  input: CreateExperimentInput
+): Promise<ActionResult> {
   if (!requireRole(ctx, "member")) return { ok: false, error: "Insufficient permissions" };
 
   const parsed = createExperimentSchema.safeParse({ ...input, orgId: ctx.org.id });
@@ -66,24 +69,35 @@ export async function createExperimentAction(input: {
     });
   });
 
-  revalidatePath("/dashboard/experiments");
   return { ok: true };
 }
 
-export async function changeExperimentStatusAction(
-  experimentId: string,
-  status: "running" | "completed" | "archived"
-): Promise<ActionResult> {
+export async function createExperimentAction(input: CreateExperimentInput): Promise<ActionResult> {
   const ctx = requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await createExperimentCore(ctx, input);
+
+  revalidatePath("/dashboard/experiments");
+  return result;
+}
+
+const VALID_STATUSES = ["running", "completed", "archived"] as const;
+type ExperimentStatusInput = (typeof VALID_STATUSES)[number];
+
+export async function changeExperimentStatusCore(
+  ctx: ViewerContext,
+  experimentId: string,
+  status: ExperimentStatusInput
+): Promise<ActionResult> {
   if (!requireRole(ctx, "member")) return { ok: false, error: "Insufficient permissions" };
   // Server Actions are callable directly at runtime, where TypeScript's
   // union type offers no protection — validate the value at runtime too.
-  if (!["running", "completed", "archived"].includes(status)) {
+  if (!VALID_STATUSES.includes(status)) {
     return { ok: false, error: "Invalid status" };
   }
 
-  const result = await mutateDb((db) => {
+  return mutateDb((db) => {
     const experiment = db.experiments.find((e) => e.id === experimentId && e.orgId === ctx.org.id);
     if (!experiment) return { ok: false as const, error: "Experiment not found" };
 
@@ -109,27 +123,39 @@ export async function changeExperimentStatusAction(
 
     return { ok: true as const };
   });
+}
+
+export async function changeExperimentStatusAction(
+  experimentId: string,
+  status: "running" | "completed" | "archived"
+): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await changeExperimentStatusCore(ctx, experimentId, status);
 
   revalidatePath(`/dashboard/experiments/${experimentId}`);
   revalidatePath("/dashboard/experiments");
   return result;
 }
 
-/**
- * Records a single exposure/conversion/revenue event for an experiment.
- * Used both by the demo "simulate traffic" control in the UI and available
- * as the same primitive a real consuming app's SDK integration would call.
- */
-export async function recordEventAction(input: {
+export interface RecordEventInput {
   experimentId: string;
   variantId: string;
   eventType: "exposure" | "conversion" | "revenue" | "custom";
   subjectId: string;
   value?: number;
-}): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
+}
 
+/**
+ * Records a single exposure/conversion/revenue event for an experiment.
+ * Used both by the demo "simulate traffic" control in the UI and available
+ * as the same primitive a real consuming app's SDK integration would call.
+ * Deliberately open to any signed-in org member (no role gate) — recording
+ * an event isn't a governance-sensitive mutation the way changing an
+ * experiment's status or a flag's rollout is.
+ */
+export async function recordEventCore(ctx: ViewerContext, input: RecordEventInput): Promise<ActionResult> {
   const parsed = recordEventSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input" };
@@ -152,17 +178,25 @@ export async function recordEventAction(input: {
     });
   });
 
-  revalidatePath(`/dashboard/experiments/${input.experimentId}`);
   return { ok: true };
 }
 
+export async function recordEventAction(input: RecordEventInput): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await recordEventCore(ctx, input);
+
+  revalidatePath(`/dashboard/experiments/${input.experimentId}`);
+  return result;
+}
+
 /** Generates a batch of realistic simulated traffic for demo purposes. */
-export async function simulateTrafficAction(
+export async function simulateTrafficCore(
+  ctx: ViewerContext,
   experimentId: string,
   exposuresPerVariant: number
 ): Promise<ActionResult> {
-  const ctx = requireViewerContext();
-  if (!ctx) return { ok: false, error: "Not signed in" };
   if (!requireRole(ctx, "member")) return { ok: false, error: "Insufficient permissions" };
 
   await mutateDb((db) => {
@@ -204,6 +238,18 @@ export async function simulateTrafficAction(
     }
   });
 
-  revalidatePath(`/dashboard/experiments/${experimentId}`);
   return { ok: true };
+}
+
+export async function simulateTrafficAction(
+  experimentId: string,
+  exposuresPerVariant: number
+): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+
+  const result = await simulateTrafficCore(ctx, experimentId, exposuresPerVariant);
+
+  revalidatePath(`/dashboard/experiments/${experimentId}`);
+  return result;
 }

@@ -20,6 +20,8 @@ export interface ActionResult {
   error?: string;
 }
 
+type ResolvedAuth = { ok: true; userId: string } | { ok: false; error: string };
+
 function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -30,13 +32,19 @@ function slugify(name: string): string {
 
 const DEFAULT_ENVIRONMENTS: EnvironmentKey[] = ["development", "staging", "production"];
 
-export async function signupAction(formData: FormData): Promise<ActionResult> {
-  const parsed = signupSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    orgName: formData.get("orgName"),
-  });
+/**
+ * All the signup business logic (validation, uniqueness, creating the
+ * user/org/membership/environments) with no Next.js runtime dependency —
+ * testable directly. `signupAction` below is the thin cookie/redirect
+ * wrapper around this.
+ */
+export async function resolveSignup(input: {
+  name: unknown;
+  email: unknown;
+  password: unknown;
+  orgName: unknown;
+}): Promise<ResolvedAuth> {
+  const parsed = signupSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input" };
   }
@@ -90,7 +98,19 @@ export async function signupAction(formData: FormData): Promise<ActionResult> {
     }
   });
 
-  const token = createSessionToken(userId);
+  return { ok: true, userId };
+}
+
+export async function signupAction(formData: FormData): Promise<ActionResult> {
+  const result = await resolveSignup({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    password: formData.get("password"),
+    orgName: formData.get("orgName"),
+  });
+  if (!result.ok) return result;
+
+  const token = createSessionToken(result.userId);
   cookies().set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -102,11 +122,13 @@ export async function signupAction(formData: FormData): Promise<ActionResult> {
   redirect("/dashboard");
 }
 
-export async function loginAction(formData: FormData): Promise<ActionResult> {
-  const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
+/**
+ * All the login business logic (validation, brute-force lockout,
+ * password verification) with no Next.js runtime dependency — testable
+ * directly. `loginAction` below is the thin cookie/redirect wrapper.
+ */
+export async function resolveLogin(input: { email: unknown; password: unknown }): Promise<ResolvedAuth> {
+  const parsed = loginSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: "Enter a valid email and password" };
   }
@@ -125,7 +147,17 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
   }
   clearFailedLogins(email);
 
-  const token = createSessionToken(user.id);
+  return { ok: true, userId: user.id };
+}
+
+export async function loginAction(formData: FormData): Promise<ActionResult> {
+  const result = await resolveLogin({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!result.ok) return result;
+
+  const token = createSessionToken(result.userId);
   cookies().set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
