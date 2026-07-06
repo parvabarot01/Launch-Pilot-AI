@@ -1,0 +1,67 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { mutateDb } from "@/lib/db";
+import { requireViewerContext, requireRole } from "@/lib/context";
+import { appendAudit } from "@/lib/audit";
+import { newId } from "@/lib/ids";
+import type { ActionResult } from "./auth";
+
+export async function decideApprovalAction(
+  approvalId: string,
+  decision: "approved" | "rejected"
+): Promise<ActionResult> {
+  const ctx = requireViewerContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+  if (!requireRole(ctx, "admin")) {
+    return { ok: false, error: "Only admins or owners can review rollout approvals" };
+  }
+
+  const result = await mutateDb((db) => {
+    const approval = db.approvals.find((a) => a.id === approvalId && a.orgId === ctx.org.id);
+    if (!approval) return { ok: false as const, error: "Approval request not found" };
+    if (approval.status !== "pending") {
+      return { ok: false as const, error: "This request was already reviewed" };
+    }
+
+    approval.status = decision;
+    approval.reviewedBy = ctx.user.id;
+    approval.reviewedByName = ctx.user.name;
+    approval.reviewedAt = new Date().toISOString();
+
+    if (decision === "approved") {
+      const flag = db.flags.find((f) => f.id === approval.flagId);
+      const state = flag?.environments.find((e) => e.environmentId === approval.environmentId);
+      if (state) {
+        db.rollbackSnapshots.push({
+          id: newId("snap"),
+          flagId: approval.flagId,
+          environmentId: approval.environmentId,
+          state: { ...state, targetingRules: [...state.targetingRules] },
+          createdAt: new Date().toISOString(),
+          label: "Auto-snapshot before approved rollout increase",
+        });
+        state.rolloutPercentage = approval.toRolloutPercentage;
+        state.updatedAt = new Date().toISOString();
+        state.updatedBy = ctx.user.id;
+      }
+    }
+
+    appendAudit(db, {
+      orgId: ctx.org.id,
+      actorId: ctx.user.id,
+      actorName: ctx.user.name,
+      action: decision === "approved" ? "approval.approved" : "approval.rejected",
+      entityType: "approval",
+      entityId: approvalId,
+      before: { status: "pending" },
+      after: { status: decision },
+    });
+
+    return { ok: true as const };
+  });
+
+  revalidatePath("/dashboard/governance");
+  revalidatePath("/dashboard/flags");
+  return result;
+}
