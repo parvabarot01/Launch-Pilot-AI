@@ -81,7 +81,8 @@ export type AuditAction =
   | "approval.rejected"
   | "rollback.performed"
   | "org.member_added"
-  | "org.member_role_changed";
+  | "org.member_role_changed"
+  | "environment.api_key_regenerated";
 
 export interface AuditLogEntry {
   id: string;
@@ -89,7 +90,7 @@ export interface AuditLogEntry {
   actorId: string;
   actorName: string;
   action: AuditAction;
-  entityType: "flag" | "experiment" | "approval" | "organization";
+  entityType: "flag" | "experiment" | "approval" | "organization" | "environment";
   entityId: string;
   before: unknown;
   after: unknown;

@@ -16,6 +16,7 @@ export const AUDIT_ACTIONS: AuditAction[] = [
   "rollback.performed",
   "org.member_added",
   "org.member_role_changed",
+  "environment.api_key_regenerated",
 ];
 
 export const AUDIT_ENTITY_TYPES: AuditLogEntry["entityType"][] = [
@@ -23,6 +24,7 @@ export const AUDIT_ENTITY_TYPES: AuditLogEntry["entityType"][] = [
   "experiment",
   "approval",
   "organization",
+  "environment",
 ];
 
 export function appendAudit(

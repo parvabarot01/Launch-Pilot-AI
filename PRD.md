@@ -74,7 +74,7 @@ answer "is this safe to ship."
 ### Platform
 - Multi-tenant orgs with role-based access (owner/admin/member/viewer)
 - Three environments per org (development/staging/production), each with
-  its own API key
+  its own API key, rotatable on demand (admin/owner only)
 - Dependency-free client SDK for flag evaluation from any consuming app
 - Rate-limited, cached flag-evaluation endpoint (the highest-traffic path)
 

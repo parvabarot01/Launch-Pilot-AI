@@ -117,6 +117,16 @@ in the UI), then:
 This means the assistant is never answering from nothing: both modes are
 grounded in the same computed statistics.
 
+## API key rotation
+
+Each environment's API key can be regenerated from Settings
+(`regenerateApiKeyAction` in `src/app/actions/environments.ts`,
+admin/owner only). The old key is invalidated immediately — any
+consuming app's SDK still using it will fail flag evaluation calls until
+updated with the new key. Regeneration is audited (last 4 characters of
+old/new key only, never the full secret, since audit entries can be
+exported to CSV).
+
 ## Security
 
 - Session cookies: HMAC-SHA256 signed (`src/lib/auth.ts`), httpOnly,
@@ -131,6 +141,9 @@ grounded in the same computed statistics.
   X-Content-Type-Options, Referrer-Policy, Permissions-Policy).
 - Rate limiting on the one unauthenticated-by-session, highest-traffic
   endpoint (`/api/evaluate`).
+- Password hashing, session token signing/verification (including
+  tamper and expiry rejection), and role-hierarchy checks are covered by
+  `src/lib/auth.test.ts`.
 
 ## Known limitations of the standalone mode
 
