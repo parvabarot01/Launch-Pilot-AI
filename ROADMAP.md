@@ -19,7 +19,10 @@
 - Swap in-memory cache/rate-limiter for Upstash Redis
 - Connect Groq for the AI assistant in production
 - Emailed invites (replacing direct-add-by-email)
-- CI/CD to Vercel, error tracking, core-flow automated test coverage
+- CI/CD to Vercel, error tracking
+- Integration/UI test coverage (current suite covers core logic — stats
+  engine, flag evaluation, governance risk scoring — but not
+  Server Actions or rendered pages)
 - Multi-instance-safe evaluation path (current in-memory cache/rate-limit
   only works correctly on a single instance)
 

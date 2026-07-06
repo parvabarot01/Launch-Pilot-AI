@@ -138,6 +138,13 @@ grounded in the same computed statistics.
   `src/lib/ratelimit.ts`).
 - No emailed invites yet — adding a member requires them to already have
   an account (see `src/app/actions/members.ts`).
+- Pinned to Next.js 14.2.x (latest patch on that line) rather than 16 —
+  this codebase uses synchronous `cookies()`/`headers()` throughout, which
+  Next 15+ made async. A handful of `npm audit` findings on this version
+  (Image Optimization DoS, WebSocket-upgrade SSRF, RSC cache poisoning,
+  i18n middleware bypass) are in subsystems this app doesn't use
+  (no `next/image`, no WebSocket upgrades, no i18n routing) — re-evaluate
+  before any real internet-facing deployment.
 
 ## Free-tier ceilings to watch when connecting real services
 - **Supabase free tier:** 500MB database, paused after 1 week of

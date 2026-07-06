@@ -31,6 +31,7 @@ ship one change with confidence.
 npm install
 npm run seed   # optional: creates a demo org with sample flags/experiments
 npm run dev
+npm test       # runs the core-logic test suite (stats, evaluation, governance)
 ```
 
 Then visit `http://localhost:3000`. If you ran the seed script, log in with
