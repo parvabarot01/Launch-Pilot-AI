@@ -141,6 +141,14 @@ exported to CSV).
   X-Content-Type-Options, Referrer-Policy, Permissions-Policy).
 - Rate limiting on the one unauthenticated-by-session, highest-traffic
   endpoint (`/api/evaluate`).
+- Login brute-force protection (`src/lib/loginThrottle.ts`): 5 failed
+  attempts per email locks that email out for 15 minutes. In-memory,
+  single-instance, same swap-point pattern as `cache.ts`/`ratelimit.ts`.
+  Accepted tradeoff: this makes a targeted lockout-DoS possible (repeatedly
+  failing a known victim's email locks them out too) — the standard
+  brute-force-vs-lockout-DoS tradeoff every account-lockout mechanism
+  makes; mitigating it further (e.g. CAPTCHA, IP+email combined limits)
+  is out of scope for this pass.
 - Password hashing, session token signing/verification (including
   tamper and expiry rejection), and role-hierarchy checks are covered by
   `src/lib/auth.test.ts`.

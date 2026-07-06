@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth";
 import { newId, newApiKey } from "@/lib/ids";
 import { loginSchema, signupSchema } from "@/lib/validation";
+import { isLockedOut, recordFailedLogin, clearFailedLogins } from "@/lib/loginThrottle";
 import type { Environment, EnvironmentKey, Organization } from "@/lib/types";
 
 export interface ActionResult {
@@ -111,10 +112,18 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
   }
   const { email, password } = parsed.data;
 
+  const lockout = isLockedOut(email);
+  if (lockout.locked) {
+    const minutes = Math.ceil(lockout.retryAfterSeconds / 60);
+    return { ok: false, error: `Too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` };
+  }
+
   const user = readDb().users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
+    recordFailedLogin(email);
     return { ok: false, error: "Invalid email or password" };
   }
+  clearFailedLogins(email);
 
   const token = createSessionToken(user.id);
   cookies().set(SESSION_COOKIE_NAME, token, {

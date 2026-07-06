@@ -35,6 +35,7 @@ theme for traceability, all shipped in this pass unless noted.
 - [x] Compliance/change-log report — CSV export of the audit log (`/api/audit-log/export`), filterable by action and entity type, same filters exposed as dropdowns on the Audit Log page
 - [x] Automated test coverage on core logic — significance engine, flag evaluation (kill switch, targeting rules, deterministic bucketing), governance risk scoring, and auth/session security (password hashing, token sign/verify/tamper/expiry, role hierarchy). `npm test` (Node's built-in test runner via `tsx`, no new test framework dependency). 35 tests. UI/integration flows still untested — see ROADMAP.md V1.
 - [x] API key rotation — regenerate an environment's key from Settings (admin/owner only), old key invalidated immediately, rotation audited
+- [x] Login brute-force protection — 5 failed attempts per email locks that email out for 15 minutes (`src/lib/loginThrottle.ts`)
 - [ ] Error tracking — deferred, requires connecting a third-party service
 
 ## Front page
