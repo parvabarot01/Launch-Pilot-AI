@@ -13,6 +13,7 @@ import type { ActionResult } from "./auth";
 // from admin to owner). Ownership only exists via org creation or
 // changeMemberRoleAction, which is itself owner-only.
 const ADDABLE_ROLES: Role[] = ["viewer", "member", "admin"];
+const ALL_ROLES: Role[] = ["viewer", "member", "admin", "owner"];
 
 /**
  * Adds an existing LaunchPilot user (by email) to the current org. Since
@@ -74,6 +75,10 @@ export async function changeMemberRoleAction(
   const ctx = requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
   if (!requireRole(ctx, "owner")) return { ok: false, error: "Only the org owner can change roles" };
+  // Server Actions are callable directly at runtime, where TypeScript's
+  // `Role` type offers no protection — validate the value actually is one
+  // of the four real roles rather than trusting the parameter type.
+  if (!ALL_ROLES.includes(role)) return { ok: false, error: "Invalid role" };
 
   const result = await mutateDb((db) => {
     const membership = db.memberships.find((m) => m.id === membershipId && m.orgId === ctx.org.id);

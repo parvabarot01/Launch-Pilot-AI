@@ -77,6 +77,11 @@ export async function changeExperimentStatusAction(
   const ctx = requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
   if (!requireRole(ctx, "member")) return { ok: false, error: "Insufficient permissions" };
+  // Server Actions are callable directly at runtime, where TypeScript's
+  // union type offers no protection — validate the value at runtime too.
+  if (!["running", "completed", "archived"].includes(status)) {
+    return { ok: false, error: "Invalid status" };
+  }
 
   const result = await mutateDb((db) => {
     const experiment = db.experiments.find((e) => e.id === experimentId && e.orgId === ctx.org.id);

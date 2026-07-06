@@ -16,6 +16,11 @@ export async function decideApprovalAction(
   if (!requireRole(ctx, "admin")) {
     return { ok: false, error: "Only admins or owners can review rollout approvals" };
   }
+  // Server Actions are callable directly at runtime, where TypeScript's
+  // union type offers no protection — validate the value at runtime too.
+  if (decision !== "approved" && decision !== "rejected") {
+    return { ok: false, error: "Invalid decision" };
+  }
 
   const result = await mutateDb((db) => {
     const approval = db.approvals.find((a) => a.id === approvalId && a.orgId === ctx.org.id);
