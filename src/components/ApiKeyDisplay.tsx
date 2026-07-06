@@ -3,19 +3,37 @@
 import { useState, useTransition } from "react";
 import { regenerateApiKeyAction } from "@/app/actions/environments";
 
+/**
+ * `apiKey` must already be access-controlled by the caller — pass `null`
+ * (never the real secret) when the viewer isn't authorized to see it.
+ * Reveal/copy are only rendered when a real key was actually provided, so
+ * there's nothing in the client bundle to leak via devtools for a viewer
+ * who was correctly given `null`.
+ */
 export function ApiKeyDisplay({
   environmentId,
   apiKey,
+  lastFour,
   canRegenerate,
 }: {
   environmentId: string;
-  apiKey: string;
+  apiKey: string | null;
+  lastFour: string;
   canRegenerate: boolean;
 }) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  if (apiKey === null) {
+    return (
+      <div className="flex items-center gap-2">
+        <code className="rounded bg-slate-100 px-2 py-1 text-xs">{"•".repeat(26)}{lastFour}</code>
+        <span className="text-xs text-slate-400">Ask an admin to view or rotate this key</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-end gap-1">

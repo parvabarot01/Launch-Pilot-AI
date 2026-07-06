@@ -16,6 +16,10 @@ export default function SettingsPage() {
 
   const canManageMembers = requireRole(ctx, "admin");
   const canRegenerateKeys = requireRole(ctx, "admin");
+  // Viewers (read-only stakeholders, e.g. an exec per PERSONAS.md) should
+  // never receive the live secret in the page payload at all — not just
+  // have the reveal/copy buttons hidden client-side.
+  const canViewSecrets = requireRole(ctx, "member");
 
   return (
     <div className="space-y-8">
@@ -33,7 +37,12 @@ export default function SettingsPage() {
           {ctx.environments.map((env) => (
             <div key={env.id} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
               <span className="font-medium capitalize text-slate-700">{env.name}</span>
-              <ApiKeyDisplay environmentId={env.id} apiKey={env.apiKey} canRegenerate={canRegenerateKeys} />
+              <ApiKeyDisplay
+                environmentId={env.id}
+                apiKey={canViewSecrets ? env.apiKey : null}
+                lastFour={env.apiKey.slice(-4)}
+                canRegenerate={canRegenerateKeys}
+              />
             </div>
           ))}
         </div>

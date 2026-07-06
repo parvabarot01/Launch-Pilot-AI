@@ -117,6 +117,24 @@ in the UI), then:
 This means the assistant is never answering from nothing: both modes are
 grounded in the same computed statistics.
 
+## Server/Client component boundary: never pass full DB records with secrets
+
+`Environment` records carry a live `apiKey`. Passing the full object (or
+an array of them) as a prop to a `"use client"` component serializes it
+into the RSC payload embedded in the page — visible via view-source,
+independent of anything rendered on screen. TypeScript's excess-property
+checks do **not** catch this when the value comes from a variable rather
+than an inline object literal, so the type system offers no protection
+here. Rule going forward: only pass the exact fields a client component
+needs (`{ id, key, name }`, never the record itself), and for anything
+resembling a credential, decide server-side whether the caller is even
+allowed to receive the real value at all — see `src/app/dashboard/settings/page.tsx`
+(`canViewSecrets`) and `ApiKeyDisplay`, which takes `apiKey: string | null`
+specifically so "not authorized" means the secret was never sent, not
+just hidden behind a client-side check. The same reasoning applies to
+`User.passwordHash`/`passwordSalt` — never pass the full `User` object to
+a client component; every current usage destructures `.id`/`.name` only.
+
 ## API key rotation
 
 Each environment's API key can be regenerated from Settings

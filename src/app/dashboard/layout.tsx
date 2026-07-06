@@ -36,7 +36,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="text-sm text-slate-500">{ctx.org.name}</span>
             )}
 
-            <EnvironmentSwitcher environments={ctx.environments} activeEnvKey={ctx.environment.key} />
+            <EnvironmentSwitcher
+              environments={ctx.environments.map((e) => ({ id: e.id, key: e.key, name: e.name }))}
+              activeEnvKey={ctx.environment.key}
+            />
           </div>
 
           <div className="flex items-center gap-3">
