@@ -121,7 +121,9 @@ export function CreateExperimentForm({
                 Control
               </label>
               <button
+                type="button"
                 className="btn-secondary col-span-1"
+                aria-label={`Remove variant ${i + 1}`}
                 onClick={() => setVariants(variants.filter((_, idx) => idx !== i))}
               >
                 ✕

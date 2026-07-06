@@ -148,7 +148,9 @@ export function FlagStateEditor({
                 }}
               />
               <button
+                type="button"
                 className="btn-secondary col-span-1"
+                aria-label={`Remove rule ${i + 1}`}
                 onClick={() => setRules(rules.filter((_, idx) => idx !== i))}
               >
                 ✕
