@@ -17,11 +17,11 @@ function riskLevel(score: number) {
   return "low";
 }
 
-export default function GovernancePage() {
-  const ctx = requireViewerContext();
+export default async function GovernancePage() {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
-  const db = readDb();
+  const db = await readDb();
   const canDecide = requireRole(ctx, "admin");
 
   const approvals = db.approvals

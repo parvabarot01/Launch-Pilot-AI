@@ -6,11 +6,11 @@
 |---|---|---|
 | Frontend | Next.js 14 App Router, TypeScript, Tailwind | — (unchanged) |
 | Hosting | Local dev server / any Node host | Vercel free tier |
-| Data store | Local JSON file (`.data/db.json`) via `src/lib/db.ts` | Supabase Postgres + RLS |
-| Flag-eval cache | In-memory `Map` via `src/lib/cache.ts` | Upstash Redis |
-| Rate limiting | In-memory fixed window via `src/lib/ratelimit.ts` | Upstash Ratelimit |
+| Data store | Local JSON file (`.data/db.json`) via `src/lib/db.ts` | **Live**: Supabase Postgres, single JSONB row (see below) |
+| Flag-eval cache | In-memory `Map` via `src/lib/cache.ts` | **Live**: Upstash Redis |
+| Rate limiting | In-memory fixed window via `src/lib/ratelimit.ts` | **Live**: Upstash Ratelimit |
 | Statistics | `simple-statistics` (real, not swapped) | — (unchanged) |
-| AI assistant | Rule-based heuristics engine (`src/lib/ai.ts`) | Groq API, Llama 3.3 70B |
+| AI assistant | Rule-based heuristics engine (`src/lib/ai.ts`) | **Live**: Groq API, Llama 3.3 70B |
 | Mutations | Next.js Server Actions (`src/app/actions/*`) | — (unchanged) |
 | Public API | One real REST endpoint: `POST /api/evaluate` | — (unchanged) |
 | Client SDK | Dependency-free JS (`public/sdk/launchpilot.js`) | — (unchanged) |
@@ -50,10 +50,24 @@ ApprovalRequest — orgId, flagId, environmentId, from/toRolloutPercentage,
 FlagRollbackSnapshot — flagId, environmentId, state (full FlagEnvironmentState), label
 ```
 
-Every top-level key in `Database` (`src/lib/types.ts`) maps 1:1 to what
-would be a Postgres table — migrating to Supabase means creating matching
-tables and replacing the body of `readDb`/`mutateDb` in `src/lib/db.ts`;
-every repository/action calling those functions is unaffected.
+When Supabase is connected (`NEXT_PUBLIC_SUPABASE_URL` set), the entire
+`Database` object is stored as a single JSONB row in one Postgres table
+(`db_snapshot`, see `scripts/supabase-init.sql`) rather than one real
+table per top-level key. This was a deliberate simplification over a
+fully relational schema: the app already loads the whole `Database` into
+memory and filters/joins in application code (never real SQL queries), so
+per-table storage would add real migration/RLS work without the app
+actually using any of the relational benefits (indexing, partial reads,
+Postgres-level access control) it would unlock. RLS is enabled on the
+table with zero policies — only the `service_role` key (server-only) can
+touch it; the app's existing Server Action RBAC is the actual access
+control layer, same as it is for the local JSON file today.
+
+One consequence: `readDb()` is `async` (a network read, unlike a
+synchronous local file read), so every caller awaits it. `LP_DB_PATH`
+(see `src/lib/testFixtures.ts`) always forces local-file mode regardless
+of what's in the environment, so integration tests never touch a real
+Supabase project even if Supabase env vars happen to be set.
 
 ## Flag evaluation design
 
@@ -181,17 +195,23 @@ exported to CSV).
   names/descriptions, and targeting-rule values are all user-controlled
   text that ends up in an exported report a reviewer may open in Excel.
 
-## Known limitations of the standalone mode
+## Known limitations
 
-- The local JSON store uses an in-process write queue, not real
-  transactions — correct for a single dev/demo instance, not for
-  multiple concurrent server instances. Real concurrency safety comes
-  from moving to Supabase Postgres.
-- The in-memory cache/rate-limiter reset on server restart and don't
-  share state across instances — fine for one instance, not for a
-  horizontally-scaled deployment. Both have Upstash-shaped interfaces
-  specifically so this is a body-only swap (`src/lib/cache.ts`,
-  `src/lib/ratelimit.ts`).
+- The local JSON store (used when Supabase isn't configured) uses an
+  in-process write queue, not real transactions — correct for a single
+  dev/demo instance, not for multiple concurrent server instances.
+- With Supabase connected, `mutateDb` still only serializes writes
+  in-process (the same queue as local mode) and does a plain
+  read-modify-write of the single `db_snapshot` row — not a real Postgres
+  transaction (e.g. `SELECT ... FOR UPDATE`). Fine at this app's traffic
+  level; a genuine concurrency guarantee across multiple server instances
+  would need that row locked during the read-modify-write cycle.
+- The in-memory cache/rate-limiter fallback (used when Upstash isn't
+  configured) resets on server restart and doesn't share state across
+  instances. With Upstash connected, keys are namespaced under
+  `launchpilot:` because this Upstash database is shared with another,
+  unrelated project on the same account — the 10,000 commands/day free
+  tier is likewise shared, not dedicated to LaunchPilot.
 - No emailed invites yet — adding a member requires them to already have
   an account (see `src/app/actions/members.ts`).
 - Pinned to Next.js 14.2.x (latest patch on that line) rather than 16 —

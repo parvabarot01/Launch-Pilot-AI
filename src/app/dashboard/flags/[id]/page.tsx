@@ -5,11 +5,11 @@ import { FlagStateEditor } from "@/components/FlagStateEditor";
 import { RollbackList } from "@/components/RollbackList";
 import { ArchiveFlagButton } from "@/components/ArchiveFlagButton";
 
-export default function FlagDetailPage({ params }: { params: { id: string } }) {
-  const ctx = requireViewerContext();
+export default async function FlagDetailPage({ params }: { params: { id: string } }) {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
-  const db = readDb();
+  const db = await readDb();
   const flag = db.flags.find((f) => f.id === params.id && f.orgId === ctx.org.id);
   if (!flag) notFound();
 

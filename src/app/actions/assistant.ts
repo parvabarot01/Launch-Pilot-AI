@@ -7,11 +7,11 @@ import { analyzeExperiment, askAssistant } from "@/lib/ai";
 export async function askAssistantAction(
   question: string
 ): Promise<{ ok: true; answer: string; source: "groq" | "heuristic" } | { ok: false; error: string }> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
   if (!question.trim()) return { ok: false, error: "Ask a question first" };
 
-  const db = readDb();
+  const db = await readDb();
   const flags = db.flags.filter((f) => f.orgId === ctx.org.id && !f.archivedAt);
   const experiments = db.experiments.filter(
     (e) => e.orgId === ctx.org.id && e.environmentId === ctx.environment.id

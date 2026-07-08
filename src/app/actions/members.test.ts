@@ -15,7 +15,7 @@ test("addMemberCore: an admin can add an existing user as viewer/member/admin", 
   const result = await addMemberCore(owner, { email: "outsider@example.com", role: "member" });
 
   assert.equal(result.ok, true);
-  const db = readDb();
+  const db = (await readDb());
   assert.equal(db.memberships.filter((m) => m.orgId === owner.org.id).length, 2);
   assert.ok(db.auditLog.some((e) => e.action === "org.member_added"));
 });
@@ -34,12 +34,12 @@ test("addMemberCore: CANNOT be used to grant owner, even if 'owner' is passed di
 
   assert.equal(result.ok, false);
   assert.equal(
-    readDb().memberships.some((m) => m.orgId === owner.org.id),
+    (await readDb()).memberships.some((m) => m.orgId === owner.org.id),
     true,
     "sanity: owner's own membership still exists"
   );
   assert.equal(
-    readDb().memberships.filter((m) => m.orgId === owner.org.id && m.role === "owner").length,
+    (await readDb()).memberships.filter((m) => m.orgId === owner.org.id && m.role === "owner").length,
     1,
     "no second owner should have been created"
   );
@@ -82,7 +82,7 @@ test("addMemberCore: rejects adding someone already a member", async (t) => {
   const second = await addMemberCore(owner, { email: "already@example.com", role: "admin" });
 
   assert.equal(second.ok, false);
-  assert.equal(readDb().memberships.filter((m) => m.orgId === owner.org.id).length, 2);
+  assert.equal((await readDb()).memberships.filter((m) => m.orgId === owner.org.id).length, 2);
 });
 
 test("changeMemberRoleCore: the owner can promote a member to admin", async (t) => {
@@ -96,7 +96,7 @@ test("changeMemberRoleCore: the owner can promote a member to admin", async (t) 
 
   assert.equal(result.ok, true);
   assert.equal(
-    readDb().memberships.find((m) => m.id === memberCtx.membership.id)!.role,
+    (await readDb()).memberships.find((m) => m.id === memberCtx.membership.id)!.role,
     "admin"
   );
 });
@@ -124,7 +124,7 @@ test("changeMemberRoleCore: refuses to demote the last remaining owner", async (
 
   assert.equal(result.ok, false);
   assert.match(result.error!, /at least one owner/i);
-  assert.equal(readDb().memberships[0].role, "owner");
+  assert.equal((await readDb()).memberships[0].role, "owner");
 });
 
 test("changeMemberRoleCore: CAN demote an owner if another owner remains", async (t) => {
@@ -137,7 +137,7 @@ test("changeMemberRoleCore: CAN demote an owner if another owner remains", async
   const result = await changeMemberRoleCore(owner, secondOwner.membership.id, "admin");
 
   assert.equal(result.ok, true);
-  assert.equal(readDb().memberships.filter((m) => m.role === "owner").length, 1);
+  assert.equal((await readDb()).memberships.filter((m) => m.role === "owner").length, 1);
 });
 
 test("changeMemberRoleCore: rejects a garbage role value at runtime", async (t) => {
@@ -151,5 +151,5 @@ test("changeMemberRoleCore: rejects a garbage role value at runtime", async (t) 
   const result = await changeMemberRoleCore(owner, memberCtx.membership.id, "superadmin");
 
   assert.equal(result.ok, false);
-  assert.equal(readDb().memberships.find((m) => m.id === memberCtx.membership.id)!.role, "member");
+  assert.equal((await readDb()).memberships.find((m) => m.id === memberCtx.membership.id)!.role, "member");
 });

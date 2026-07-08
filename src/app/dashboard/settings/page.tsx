@@ -4,11 +4,11 @@ import { requireViewerContext, requireRole } from "@/lib/context";
 import { AddMemberForm } from "@/components/AddMemberForm";
 import { ApiKeyDisplay } from "@/components/ApiKeyDisplay";
 
-export default function SettingsPage() {
-  const ctx = requireViewerContext();
+export default async function SettingsPage() {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
-  const db = readDb();
+  const db = await readDb();
   const members = db.memberships
     .filter((m) => m.orgId === ctx.org.id)
     .map((m) => ({ ...m, user: db.users.find((u) => u.id === m.userId) }))

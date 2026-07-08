@@ -70,7 +70,7 @@ export async function decideApprovalAction(
   approvalId: string,
   decision: "approved" | "rejected"
 ): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await decideApprovalCore(ctx, approvalId, decision);

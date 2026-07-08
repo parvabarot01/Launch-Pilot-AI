@@ -15,7 +15,7 @@ test("regenerateApiKeyCore: an admin can rotate a key; old key stops matching", 
   const result = await regenerateApiKeyCore(owner, env.id);
 
   assert.equal(result.ok, true);
-  const updated = readDb().environments.find((e) => e.id === env.id)!;
+  const updated = (await readDb()).environments.find((e) => e.id === env.id)!;
   assert.notEqual(updated.apiKey, oldKey);
   assert.ok(updated.apiKey.startsWith("lp_"));
 });
@@ -32,7 +32,7 @@ test("regenerateApiKeyCore: a member cannot rotate a key (admin/owner only)", as
   const result = await regenerateApiKeyCore(memberCtx, env.id);
 
   assert.equal(result.ok, false);
-  assert.equal(readDb().environments.find((e) => e.id === env.id)!.apiKey, oldKey);
+  assert.equal((await readDb()).environments.find((e) => e.id === env.id)!.apiKey, oldKey);
 });
 
 test("regenerateApiKeyCore: audit entry never contains the full old or new key", async (t) => {
@@ -44,10 +44,10 @@ test("regenerateApiKeyCore: audit entry never contains the full old or new key",
 
   await regenerateApiKeyCore(owner, env.id);
 
-  const entry = readDb().auditLog.find((e) => e.action === "environment.api_key_regenerated")!;
+  const entry = (await readDb()).auditLog.find((e) => e.action === "environment.api_key_regenerated")!;
   assert.ok(entry);
   const serialized = JSON.stringify(entry);
-  const newKey = readDb().environments.find((e) => e.id === env.id)!.apiKey;
+  const newKey = (await readDb()).environments.find((e) => e.id === env.id)!.apiKey;
   assert.equal(serialized.includes(newKey), false, "full new key must never be written to the audit log");
 });
 

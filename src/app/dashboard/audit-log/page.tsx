@@ -5,18 +5,18 @@ import { filterAuditLog } from "@/lib/exports";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit";
 import type { AuditLogEntry } from "@/lib/types";
 
-export default function AuditLogPage({
+export default async function AuditLogPage({
   searchParams,
 }: {
   searchParams: { action?: string; entityType?: string };
 }) {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
   const action = searchParams.action || undefined;
   const entityType = (searchParams.entityType || undefined) as AuditLogEntry["entityType"] | undefined;
 
-  const db = readDb();
+  const db = await readDb();
   const allEntries = db.auditLog
     .filter((e) => e.orgId === ctx.org.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));

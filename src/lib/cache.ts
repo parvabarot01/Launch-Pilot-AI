@@ -1,12 +1,12 @@
+import { Redis } from "@upstash/redis";
+
 /**
- * Flag-evaluation cache. Interface intentionally mirrors the Upstash Redis
- * REST client (`get`/`set` with a TTL) so swapping the in-memory Map below
- * for `@upstash/redis` is a body-only change in this one file — nothing
- * that calls `cache.get`/`cache.set` needs to change.
- *
- * Swap point: when UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are
- * set, replace the Map implementation with Upstash REST calls.
+ * Flag-evaluation cache. Backed by Upstash Redis when configured, an
+ * in-memory Map otherwise. Keys are namespaced under "launchpilot:" since
+ * this Upstash database is shared with another project on the same account.
  */
+
+const PREFIX = "launchpilot:";
 
 interface CacheEntry {
   value: unknown;
@@ -15,10 +15,24 @@ interface CacheEntry {
 
 const store = new Map<string, CacheEntry>();
 
-export const cache = {
-  isRemote: Boolean(process.env.UPSTASH_REDIS_REST_URL),
+function useRemote(): boolean {
+  return Boolean(process.env.UPSTASH_REDIS_REST_URL);
+}
 
-  get<T>(key: string): T | null {
+let redis: Redis | null = null;
+function getRedis(): Redis {
+  if (!redis) redis = Redis.fromEnv();
+  return redis;
+}
+
+export const cache = {
+  isRemote: useRemote(),
+
+  async get<T>(key: string): Promise<T | null> {
+    if (useRemote()) {
+      const value = await getRedis().get<T>(PREFIX + key);
+      return value ?? null;
+    }
     const entry = store.get(key);
     if (!entry) return null;
     if (entry.expiresAt < Date.now()) {
@@ -28,15 +42,28 @@ export const cache = {
     return entry.value as T;
   },
 
-  set(key: string, value: unknown, ttlSeconds: number): void {
+  async set(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    if (useRemote()) {
+      await getRedis().set(PREFIX + key, value, { ex: ttlSeconds });
+      return;
+    }
     store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
   },
 
-  invalidate(key: string): void {
+  async invalidate(key: string): Promise<void> {
+    if (useRemote()) {
+      await getRedis().del(PREFIX + key);
+      return;
+    }
     store.delete(key);
   },
 
-  invalidatePrefix(prefix: string): void {
+  async invalidatePrefix(prefix: string): Promise<void> {
+    if (useRemote()) {
+      const keys = await getRedis().keys(`${PREFIX}${prefix}*`);
+      if (keys.length) await getRedis().del(...keys);
+      return;
+    }
     for (const key of store.keys()) {
       if (key.startsWith(prefix)) store.delete(key);
     }

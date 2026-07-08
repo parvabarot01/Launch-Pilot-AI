@@ -81,7 +81,7 @@ export async function createFlagCore(
 }
 
 export async function createFlagAction(formData: FormData): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await createFlagCore(ctx, {
@@ -249,7 +249,7 @@ export async function updateFlagStateAction(
   flagId: string,
   input: UpdateFlagStateInput
 ): Promise<ActionResult & { approvalRequested?: boolean }> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await updateFlagStateCore(ctx, flagId, input);
@@ -282,7 +282,7 @@ export async function archiveFlagCore(ctx: ViewerContext, flagId: string): Promi
 }
 
 export async function archiveFlagAction(flagId: string): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await archiveFlagCore(ctx, flagId);
@@ -326,7 +326,7 @@ export async function rollbackFlagCore(ctx: ViewerContext, snapshotId: string): 
 }
 
 export async function rollbackFlagAction(snapshotId: string): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await rollbackFlagCore(ctx, snapshotId);

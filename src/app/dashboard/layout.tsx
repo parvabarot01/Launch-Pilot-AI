@@ -14,8 +14,8 @@ const NAV = [
   { href: "/dashboard/settings", label: "Settings" },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const ctx = requireViewerContext();
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
   return (

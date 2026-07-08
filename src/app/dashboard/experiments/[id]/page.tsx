@@ -11,11 +11,11 @@ const VERDICT_COPY: Record<string, { label: string; style: string }> = {
   keep_running: { label: "Keep running", style: "bg-blue-50 text-blue-700" },
 };
 
-export default function ExperimentDetailPage({ params }: { params: { id: string } }) {
-  const ctx = requireViewerContext();
+export default async function ExperimentDetailPage({ params }: { params: { id: string } }) {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
-  const db = readDb();
+  const db = await readDb();
   const experiment = db.experiments.find((e) => e.id === params.id && e.orgId === ctx.org.id);
   if (!experiment) notFound();
 

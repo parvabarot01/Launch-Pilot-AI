@@ -20,11 +20,11 @@ export interface ViewerContext {
  * request. Returns null if not signed in or has no org (shouldn't happen
  * post-signup, since signup always creates one).
  */
-export function requireViewerContext(): ViewerContext | null {
-  const user = getCurrentUser();
+export async function requireViewerContext(): Promise<ViewerContext | null> {
+  const user = await getCurrentUser();
   if (!user) return null;
 
-  const db = readDb();
+  const db = await readDb();
   const myMemberships = db.memberships.filter((m) => m.userId === user.id);
   if (myMemberships.length === 0) return null;
 

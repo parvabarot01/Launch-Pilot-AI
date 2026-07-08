@@ -13,7 +13,7 @@ export const runtime = "nodejs";
  * page itself.
  */
 export async function GET(request: NextRequest) {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     | AuditLogEntry["entityType"]
     | undefined;
 
-  const db = readDb();
+  const db = await readDb();
   const entries = filterAuditLog(
     db.auditLog
       .filter((e) => e.orgId === ctx.org.id)

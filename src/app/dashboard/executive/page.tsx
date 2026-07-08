@@ -5,11 +5,11 @@ import { requireViewerContext } from "@/lib/context";
 import { computeRiskScore } from "@/lib/governance";
 import { analyzeExperiment } from "@/lib/ai";
 
-export default function ExecutiveDashboardPage() {
-  const ctx = requireViewerContext();
+export default async function ExecutiveDashboardPage() {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
-  const db = readDb();
+  const db = await readDb();
   const flags = db.flags.filter((f) => f.orgId === ctx.org.id && !f.archivedAt);
   const experiments = db.experiments.filter(
     (e) => e.orgId === ctx.org.id && e.environmentId === ctx.environment.id

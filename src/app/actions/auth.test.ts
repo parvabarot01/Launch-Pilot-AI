@@ -18,7 +18,7 @@ test("resolveSignup creates a user, org, owner membership, and three environment
   assert.equal(result.ok, true);
   if (!result.ok) return;
 
-  const db = readDb();
+  const db = await readDb();
   assert.equal(db.users.length, 1);
   assert.equal(db.users[0].email, "ada@example.com");
   assert.equal(db.organizations.length, 1);
@@ -45,7 +45,7 @@ test("resolveSignup rejects a duplicate email", async (t) => {
   if (second.ok) return;
   assert.match(second.error, /already exists/i);
 
-  const db = readDb();
+  const db = await readDb();
   assert.equal(db.users.length, 1, "second signup must not have created a user");
 });
 
@@ -56,7 +56,7 @@ test("resolveSignup rejects invalid input (short password) without touching the 
   const result = await resolveSignup({ name: "A", email: "short@example.com", password: "short", orgName: "Org" });
   assert.equal(result.ok, false);
 
-  const db = readDb();
+  const db = await readDb();
   assert.equal(db.users.length, 0);
 });
 

@@ -12,7 +12,7 @@ test("createFlagCore: a member can create a flag, initialized across all environ
   const result = await createFlagCore(ctx, { key: "new-checkout", name: "New Checkout", description: "desc" });
 
   assert.equal(result.ok, true);
-  const db = readDb();
+  const db = await readDb();
   assert.equal(db.flags.length, 1);
   assert.equal(db.flags[0].environments.length, 3);
   assert.ok(db.flags[0].environments.every((e) => e.rolloutPercentage === 0 && !e.enabled));
@@ -28,7 +28,7 @@ test("createFlagCore: a viewer cannot create a flag", async (t) => {
   const result = await createFlagCore(ctx, { key: "nope", name: "Nope", description: "" });
 
   assert.equal(result.ok, false);
-  assert.equal(readDb().flags.length, 0);
+  assert.equal((await readDb()).flags.length, 0);
 });
 
 test("createFlagCore: rejects a duplicate key within the same org", async (t) => {
@@ -40,7 +40,7 @@ test("createFlagCore: rejects a duplicate key within the same org", async (t) =>
   const second = await createFlagCore(ctx, { key: "dup-key", name: "Second", description: "" });
 
   assert.equal(second.ok, false);
-  assert.equal(readDb().flags.length, 1);
+  assert.equal((await readDb()).flags.length, 1);
 });
 
 test("createFlagCore: rejects an invalid key format", async (t) => {
@@ -55,7 +55,7 @@ test("createFlagCore: rejects an invalid key format", async (t) => {
 
 async function createTestFlag(ctx: Awaited<ReturnType<typeof seedViewerContext>>) {
   await createFlagCore(ctx, { key: "test-flag", name: "Test Flag", description: "" });
-  return readDb().flags[0];
+  return (await readDb()).flags[0];
 }
 
 test("updateFlagStateCore: a small rollout increase applies immediately and snapshots first", async (t) => {
@@ -74,7 +74,7 @@ test("updateFlagStateCore: a small rollout increase applies immediately and snap
   assert.equal(result.ok, true);
   assert.notEqual(result.approvalRequested, true);
 
-  const db = readDb();
+  const db = await readDb();
   const state = db.flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
   assert.equal(state.rolloutPercentage, 20);
   assert.equal(state.enabled, true);
@@ -97,7 +97,7 @@ test("updateFlagStateCore: a large rollout increase (>=50 points) requires appro
   assert.equal(result.ok, true);
   assert.equal(result.approvalRequested, true);
 
-  const db = readDb();
+  const db = await readDb();
   const state = db.flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
   assert.equal(state.rolloutPercentage, 0, "rollout must NOT have been applied yet");
   assert.equal(db.approvals.length, 1);
@@ -120,13 +120,13 @@ test("updateFlagStateCore: reaching exactly 100% always requires approval, regar
   await updateFlagStateCore(ctx, flag.id, { environmentId: ctx.environment.id, rolloutPercentage: 40 });
   await updateFlagStateCore(ctx, flag.id, { environmentId: ctx.environment.id, rolloutPercentage: 80 });
   await updateFlagStateCore(ctx, flag.id, { environmentId: ctx.environment.id, rolloutPercentage: 95 });
-  assert.equal(readDb().approvals.length, 0, "none of the small steps should have required approval");
+  assert.equal((await readDb()).approvals.length, 0, "none of the small steps should have required approval");
 
   // Now go from 95% to 100% - a jump of only 5 points, but landing on 100%.
   const result = await updateFlagStateCore(ctx, flag.id, { environmentId: ctx.environment.id, rolloutPercentage: 100 });
 
   assert.equal(result.approvalRequested, true);
-  const db = readDb();
+  const db = await readDb();
   const state = db.flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
   assert.equal(state.rolloutPercentage, 95, "must still be at the pre-approval value");
 });
@@ -143,7 +143,7 @@ test("updateFlagStateCore: kill switch toggles immediately without approval, eve
 
   assert.equal(result.ok, true);
   assert.notEqual(result.approvalRequested, true);
-  const state = readDb().flags[0].environments.find((e) => e.environmentId === prodEnv.id)!;
+  const state = (await readDb()).flags[0].environments.find((e) => e.environmentId === prodEnv.id)!;
   assert.equal(state.killSwitch, true);
 });
 
@@ -175,7 +175,7 @@ test("updateFlagStateCore: targeting rules are persisted with generated ids", as
   });
 
   assert.equal(result.ok, true);
-  const state = readDb().flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
+  const state = (await readDb()).flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
   assert.equal(state.targetingRules.length, 1);
   assert.ok(state.targetingRules[0].id);
   assert.equal(state.targetingRules[0].attribute, "plan");
@@ -191,12 +191,12 @@ test("archiveFlagCore: admin can archive, member cannot", async (t) => {
 
   const deniedResult = await archiveFlagCore(memberCtx, flag.id);
   assert.equal(deniedResult.ok, false);
-  assert.equal(readDb().flags[0].archivedAt, null);
+  assert.equal((await readDb()).flags[0].archivedAt, null);
 
   const allowedResult = await archiveFlagCore(owner, flag.id);
   assert.equal(allowedResult.ok, true);
-  assert.notEqual(readDb().flags[0].archivedAt, null);
-  assert.ok(readDb().auditLog.some((e) => e.action === "flag.archived"));
+  assert.notEqual((await readDb()).flags[0].archivedAt, null);
+  assert.ok((await readDb()).auditLog.some((e) => e.action === "flag.archived"));
 });
 
 test("rollbackFlagCore: restores a prior state and is audited", async (t) => {
@@ -207,20 +207,20 @@ test("rollbackFlagCore: restores a prior state and is audited", async (t) => {
   const flag = await createTestFlag(ctx);
 
   await updateFlagStateCore(ctx, flag.id, { environmentId: ctx.environment.id, enabled: true, rolloutPercentage: 30 });
-  const snapshot = readDb().rollbackSnapshots[0];
+  const snapshot = (await readDb()).rollbackSnapshots[0];
   assert.equal(snapshot.state.rolloutPercentage, 0, "snapshot captured the state BEFORE the change");
 
   // Change it again so there's something to roll back from.
   await updateFlagStateCore(ctx, flag.id, { environmentId: ctx.environment.id, rolloutPercentage: 40 });
-  let state = readDb().flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
+  let state = (await readDb()).flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
   assert.equal(state.rolloutPercentage, 40);
 
   const result = await rollbackFlagCore(ctx, snapshot.id);
   assert.equal(result.ok, true);
 
-  state = readDb().flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
+  state = (await readDb()).flags[0].environments.find((e) => e.environmentId === ctx.environment.id)!;
   assert.equal(state.rolloutPercentage, 0, "rolled back to the pre-change state");
-  assert.ok(readDb().auditLog.some((e) => e.action === "rollback.performed"));
+  assert.ok((await readDb()).auditLog.some((e) => e.action === "rollback.performed"));
 });
 
 test("rollbackFlagCore: a member cannot roll back (admin/owner only)", async (t) => {
@@ -230,7 +230,7 @@ test("rollbackFlagCore: a member cannot roll back (admin/owner only)", async (t)
   const owner = await seedViewerContext("owner");
   const flag = await createTestFlag(owner);
   await updateFlagStateCore(owner, flag.id, { environmentId: owner.environment.id, rolloutPercentage: 30 });
-  const snapshot = readDb().rollbackSnapshots[0];
+  const snapshot = (await readDb()).rollbackSnapshots[0];
 
   const memberCtx = await seedUserInOrg(owner.org, owner.environments, "member");
   const result = await rollbackFlagCore(memberCtx, snapshot.id);

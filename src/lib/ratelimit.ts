@@ -1,12 +1,12 @@
+import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
+
 /**
  * Fixed-window rate limiter for the flag-evaluation endpoint, the
- * highest-traffic path in this product. Interface mirrors
- * `@upstash/ratelimit` (`.limit(identifier) -> { success, remaining }`) so
- * swapping to real Upstash-backed rate limiting later is a body-only
- * change in this file.
- *
- * Swap point: when UPSTASH_REDIS_REST_URL is set, back this with
- * @upstash/ratelimit + @upstash/redis instead of the Map below.
+ * highest-traffic path in this product. Backed by Upstash Ratelimit when
+ * configured, an in-memory fixed window otherwise. Keys are namespaced
+ * under "launchpilot:rl" since this Upstash database is shared with
+ * another project on the same account.
  */
 
 const WINDOW_MS = 60_000;
@@ -19,10 +19,31 @@ interface Window {
 
 const windows = new Map<string, Window>();
 
-export const ratelimit = {
-  isRemote: Boolean(process.env.UPSTASH_REDIS_REST_URL),
+function useRemote(): boolean {
+  return Boolean(process.env.UPSTASH_REDIS_REST_URL);
+}
 
-  limit(identifier: string): { success: boolean; remaining: number; resetAt: number } {
+let limiter: Ratelimit | null = null;
+function getLimiter(): Ratelimit {
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.fixedWindow(MAX_REQUESTS_PER_WINDOW, "60 s"),
+      prefix: "launchpilot:rl",
+    });
+  }
+  return limiter;
+}
+
+export const ratelimit = {
+  isRemote: useRemote(),
+
+  async limit(identifier: string): Promise<{ success: boolean; remaining: number; resetAt: number }> {
+    if (useRemote()) {
+      const result = await getLimiter().limit(identifier);
+      return { success: result.success, remaining: result.remaining, resetAt: result.reset };
+    }
+
     const now = Date.now();
     const existing = windows.get(identifier);
 

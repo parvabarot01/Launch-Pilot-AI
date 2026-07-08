@@ -73,7 +73,7 @@ export async function createExperimentCore(
 }
 
 export async function createExperimentAction(input: CreateExperimentInput): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await createExperimentCore(ctx, input);
@@ -129,7 +129,7 @@ export async function changeExperimentStatusAction(
   experimentId: string,
   status: "running" | "completed" | "archived"
 ): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await changeExperimentStatusCore(ctx, experimentId, status);
@@ -182,7 +182,7 @@ export async function recordEventCore(ctx: ViewerContext, input: RecordEventInpu
 }
 
 export async function recordEventAction(input: RecordEventInput): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await recordEventCore(ctx, input);
@@ -245,7 +245,7 @@ export async function simulateTrafficAction(
   experimentId: string,
   exposuresPerVariant: number
 ): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await simulateTrafficCore(ctx, experimentId, exposuresPerVariant);

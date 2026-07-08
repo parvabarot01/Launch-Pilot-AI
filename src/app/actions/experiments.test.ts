@@ -34,7 +34,7 @@ test("createExperimentCore: a member can create a valid experiment", async (t) =
   const result = await createExperimentCore(ctx, baseInput(ctx.environment.id));
 
   assert.equal(result.ok, true);
-  const db = readDb();
+  const db = (await readDb());
   assert.equal(db.experiments.length, 1);
   assert.equal(db.experiments[0].status, "draft");
   assert.equal(db.experiments[0].variants.length, 2);
@@ -49,7 +49,7 @@ test("createExperimentCore: a viewer cannot create an experiment", async (t) => 
   const result = await createExperimentCore(ctx, baseInput(ctx.environment.id));
 
   assert.equal(result.ok, false);
-  assert.equal(readDb().experiments.length, 0);
+  assert.equal((await readDb()).experiments.length, 0);
 });
 
 test("createExperimentCore: rejects variant allocations that don't sum to 100", async (t) => {
@@ -92,7 +92,7 @@ test("createExperimentCore: rejects an experiment with no control variant", asyn
 
 async function createTestExperiment(ctx: Awaited<ReturnType<typeof seedViewerContext>>) {
   await createExperimentCore(ctx, baseInput(ctx.environment.id));
-  return readDb().experiments[0];
+  return (await readDb()).experiments[0];
 }
 
 test("changeExperimentStatusCore: draft -> running sets startedAt, is audited", async (t) => {
@@ -105,11 +105,11 @@ test("changeExperimentStatusCore: draft -> running sets startedAt, is audited", 
   const result = await changeExperimentStatusCore(ctx, experiment.id, "running");
 
   assert.equal(result.ok, true);
-  const updated = readDb().experiments[0];
+  const updated = (await readDb()).experiments[0];
   assert.equal(updated.status, "running");
   assert.ok(updated.startedAt);
   assert.equal(updated.endedAt, null);
-  assert.ok(readDb().auditLog.some((e) => e.action === "experiment.status_changed"));
+  assert.ok((await readDb()).auditLog.some((e) => e.action === "experiment.status_changed"));
 });
 
 test("changeExperimentStatusCore: running -> completed sets endedAt", async (t) => {
@@ -122,7 +122,7 @@ test("changeExperimentStatusCore: running -> completed sets endedAt", async (t) 
 
   await changeExperimentStatusCore(ctx, experiment.id, "completed");
 
-  const updated = readDb().experiments[0];
+  const updated = (await readDb()).experiments[0];
   assert.equal(updated.status, "completed");
   assert.ok(updated.endedAt);
 });
@@ -138,7 +138,7 @@ test("changeExperimentStatusCore: rejects a garbage status value at runtime", as
   const result = await changeExperimentStatusCore(ctx, experiment.id, "hacked");
 
   assert.equal(result.ok, false);
-  assert.equal(readDb().experiments[0].status, "draft", "status must not have been corrupted");
+  assert.equal((await readDb()).experiments[0].status, "draft", "status must not have been corrupted");
 });
 
 test("changeExperimentStatusCore: a viewer cannot change status", async (t) => {
@@ -152,7 +152,7 @@ test("changeExperimentStatusCore: a viewer cannot change status", async (t) => {
   const result = await changeExperimentStatusCore(viewerCtx, experiment.id, "running");
 
   assert.equal(result.ok, false);
-  assert.equal(readDb().experiments[0].status, "draft");
+  assert.equal((await readDb()).experiments[0].status, "draft");
 });
 
 test("recordEventCore: any signed-in member can record an event (no role gate)", async (t) => {
@@ -171,7 +171,7 @@ test("recordEventCore: any signed-in member can record an event (no role gate)",
   });
 
   assert.equal(result.ok, true);
-  assert.equal(readDb().events.length, 1);
+  assert.equal((await readDb()).events.length, 1);
 });
 
 test("recordEventCore: events for a nonexistent experiment are silently dropped, not errored", async (t) => {
@@ -187,7 +187,7 @@ test("recordEventCore: events for a nonexistent experiment are silently dropped,
   });
 
   assert.equal(result.ok, true);
-  assert.equal(readDb().events.length, 0);
+  assert.equal((await readDb()).events.length, 0);
 });
 
 test("simulateTrafficCore: generates exposures and conversions per variant, member+ only", async (t) => {
@@ -200,7 +200,7 @@ test("simulateTrafficCore: generates exposures and conversions per variant, memb
   const result = await simulateTrafficCore(ctx, experiment.id, 50);
 
   assert.equal(result.ok, true);
-  const events = readDb().events;
+  const events = (await readDb()).events;
   const exposures = events.filter((e) => e.eventType === "exposure");
   assert.equal(exposures.length, 100, "50 exposures per variant x 2 variants");
   // Every exposure/conversion pair should reference one of the experiment's real variant ids.
@@ -219,5 +219,5 @@ test("simulateTrafficCore: a viewer cannot generate simulated traffic", async (t
   const result = await simulateTrafficCore(viewerCtx, experiment.id, 50);
 
   assert.equal(result.ok, false);
-  assert.equal(readDb().events.length, 0);
+  assert.equal((await readDb()).events.length, 0);
 });

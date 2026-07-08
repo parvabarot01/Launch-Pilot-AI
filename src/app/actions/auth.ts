@@ -50,7 +50,7 @@ export async function resolveSignup(input: {
   }
   const { name, email, password, orgName } = parsed.data;
 
-  const existing = readDb().users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const existing = (await readDb()).users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (existing) {
     return { ok: false, error: "An account with that email already exists" };
   }
@@ -140,7 +140,7 @@ export async function resolveLogin(input: { email: unknown; password: unknown })
     return { ok: false, error: `Too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` };
   }
 
-  const user = readDb().users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const user = (await readDb()).users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
     recordFailedLogin(email);
     return { ok: false, error: "Invalid email or password" };

@@ -11,11 +11,11 @@ const STATUS_STYLES: Record<string, string> = {
   archived: "bg-slate-100 text-slate-400",
 };
 
-export default function ExperimentsPage() {
-  const ctx = requireViewerContext();
+export default async function ExperimentsPage() {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
-  const db = readDb();
+  const db = await readDb();
   const experiments = db.experiments
     .filter((e) => e.orgId === ctx.org.id && e.environmentId === ctx.environment.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));

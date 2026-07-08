@@ -67,7 +67,7 @@ export async function addMemberCore(
 }
 
 export async function addMemberAction(formData: FormData): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await addMemberCore(ctx, {
@@ -120,7 +120,7 @@ export async function changeMemberRoleCore(
 }
 
 export async function changeMemberRoleAction(membershipId: string, role: Role): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await changeMemberRoleCore(ctx, membershipId, role);

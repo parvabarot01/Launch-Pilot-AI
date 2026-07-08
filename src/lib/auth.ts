@@ -57,11 +57,11 @@ export function verifySessionToken(token: string | undefined): SessionPayload | 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;
 export const SESSION_MAX_AGE = SESSION_TTL_SECONDS;
 
-export function getCurrentUser(): User | null {
+export async function getCurrentUser(): Promise<User | null> {
   const token = cookies().get(SESSION_COOKIE)?.value;
   const payload = verifySessionToken(token);
   if (!payload) return null;
-  const db = readDb();
+  const db = await readDb();
   return db.users.find((u) => u.id === payload.userId) ?? null;
 }
 
@@ -77,7 +77,7 @@ export function roleAtLeast(role: Role, minimum: Role): boolean {
   return ROLE_RANK[role] >= ROLE_RANK[minimum];
 }
 
-export function getMembership(orgId: string, userId: string) {
-  const db = readDb();
+export async function getMembership(orgId: string, userId: string) {
+  const db = await readDb();
   return db.memberships.find((m) => m.orgId === orgId && m.userId === userId) ?? null;
 }

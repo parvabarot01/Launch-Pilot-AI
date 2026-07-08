@@ -4,11 +4,11 @@ import { readDb } from "@/lib/db";
 import { requireViewerContext } from "@/lib/context";
 import { CreateFlagForm } from "@/components/CreateFlagForm";
 
-export default function FlagsPage() {
-  const ctx = requireViewerContext();
+export default async function FlagsPage() {
+  const ctx = await requireViewerContext();
   if (!ctx) redirect("/login");
 
-  const db = readDb();
+  const db = await readDb();
   const flags = db.flags
     .filter((f) => f.orgId === ctx.org.id && !f.archivedAt)
     .sort((a, b) => a.name.localeCompare(b.name));

@@ -41,7 +41,7 @@ export async function regenerateApiKeyCore(ctx: ViewerContext, environmentId: st
 }
 
 export async function regenerateApiKeyAction(environmentId: string): Promise<ActionResult> {
-  const ctx = requireViewerContext();
+  const ctx = await requireViewerContext();
   if (!ctx) return { ok: false, error: "Not signed in" };
 
   const result = await regenerateApiKeyCore(ctx, environmentId);

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   }
   const { apiKey, flagKey, context } = parsed.data;
 
-  const limit = ratelimit.limit(apiKey);
+  const limit = await ratelimit.limit(apiKey);
   if (!limit.success) {
     return NextResponse.json(
       { error: "Rate limit exceeded" },
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const db = readDb();
+  const db = await readDb();
   const environment = db.environments.find((e) => e.apiKey === apiKey);
   if (!environment) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   const subjectId = context.userId || context.anonymousId || request.ip || "anonymous";
   const cacheKey = `eval:${environment.id}:${flagKey}:${subjectId}:${JSON.stringify(context)}`;
 
-  const cached = cache.get<{ enabled: boolean; reason: string }>(cacheKey);
+  const cached = await cache.get<{ enabled: boolean; reason: string }>(cacheKey);
   if (cached) {
     return NextResponse.json(cached, { headers: { "X-Cache": "HIT" } });
   }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   const state = flag?.environments.find((e) => e.environmentId === environment.id);
   const result = evaluateFlagState(state, flagKey, subjectId, context);
 
-  cache.set(cacheKey, result, 5);
+  await cache.set(cacheKey, result, 5);
 
   return NextResponse.json(result, { headers: { "X-Cache": "MISS" } });
 }
