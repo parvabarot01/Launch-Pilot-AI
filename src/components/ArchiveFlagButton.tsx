@@ -12,6 +12,7 @@ export function ArchiveFlagButton({ flagId }: { flagId: string }) {
     <button
       className="btn-danger text-xs"
       disabled={pending}
+      aria-busy={pending}
       onClick={() => {
         if (!confirm("Archive this flag? It will stop evaluating for all consumers.")) return;
         startTransition(async () => {

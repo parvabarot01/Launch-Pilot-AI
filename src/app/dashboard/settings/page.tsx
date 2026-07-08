@@ -24,19 +24,19 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-500">{ctx.org.name}</p>
+        <h1 className="text-page-title text-ink">Settings</h1>
+        <p className="text-sm text-slate">{ctx.org.name}</p>
       </div>
 
       <div className="card">
-        <h2 className="font-semibold text-slate-900">Environments &amp; API keys</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-section-head text-ink">Environments &amp; API keys</h2>
+        <p className="mt-1 text-sm text-slate">
           Each environment has its own key. Use it from the client SDK to evaluate flags.
         </p>
         <div className="mt-4 space-y-3">
           {ctx.environments.map((env) => (
-            <div key={env.id} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
-              <span className="font-medium capitalize text-slate-700">{env.name}</span>
+            <div key={env.id} className="flex items-center justify-between rounded-control border border-rule px-3 py-2">
+              <span className="font-medium capitalize text-slate">{env.name}</span>
               <ApiKeyDisplay
                 environmentId={env.id}
                 apiKey={canViewSecrets ? env.apiKey : null}
@@ -46,8 +46,8 @@ export default async function SettingsPage() {
             </div>
           ))}
         </div>
-        <div className="mt-4 rounded-lg bg-slate-900 p-4 text-xs text-slate-100">
-          <pre className="overflow-x-auto">{`<script src="/sdk/launchpilot.js"></script>
+        <div className="mt-4 rounded-control bg-ink p-4 text-xs text-white">
+          <pre className="overflow-x-auto font-mono">{`<script src="/sdk/launchpilot.js"></script>
 <script>
   const lp = LaunchPilot.init({ apiKey: "<environment API key above>", baseUrl: window.location.origin });
   const isOn = await lp.getFlag("your-flag-key", false, { userId: "u_123" });
@@ -57,30 +57,30 @@ export default async function SettingsPage() {
 
       <div className="card">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-slate-900">Members</h2>
+          <h2 className="text-section-head text-ink">Members</h2>
         </div>
         <table className="mt-4 w-full text-left text-sm">
-          <thead className="text-slate-500">
+          <thead className="text-eyebrow uppercase text-mute">
             <tr>
               <th className="pb-2">Name</th>
               <th className="pb-2">Email</th>
               <th className="pb-2">Role</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-rule">
             {members.map((m) => (
               <tr key={m.id}>
-                <td className="py-2">{m.user!.name}</td>
-                <td className="py-2 text-slate-500">{m.user!.email}</td>
-                <td className="py-2 capitalize">{m.role}</td>
+                <td className="py-2 text-ink">{m.user!.name}</td>
+                <td className="py-2 text-slate">{m.user!.email}</td>
+                <td className="py-2 capitalize text-ink">{m.role}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {canManageMembers && (
-          <div className="mt-4 border-t border-slate-100 pt-4">
+          <div className="mt-4 border-t border-rule pt-4">
             <AddMemberForm />
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-mute">
               The person must already have a LaunchPilot account (sign up first) — there's no connected
               email service yet to send an invite link.
             </p>

@@ -15,7 +15,7 @@ export function OrgSwitcher({
         name="orgId"
         defaultValue={activeOrgId}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="rounded-md border border-slate-200 px-2 py-1 text-sm"
+        className="rounded-control border border-rule bg-surface px-2 py-1 text-sm text-ink"
       >
         {memberships.map((m) => (
           <option key={m.orgId} value={m.orgId}>
@@ -41,7 +41,7 @@ export function EnvironmentSwitcher({
         name="envKey"
         defaultValue={activeEnvKey}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="rounded-md border border-slate-200 px-2 py-1 text-sm capitalize"
+        className="rounded-control border border-rule bg-surface px-2 py-1 text-sm capitalize text-ink"
       >
         {environments.map((e) => (
           <option key={e.id} value={e.key}>

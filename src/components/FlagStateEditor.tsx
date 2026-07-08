@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { updateFlagStateAction } from "@/app/actions/flags";
+import { riskSpineClass, type RiskToken } from "@/lib/risk";
+import { useToast } from "@/components/Toast";
 import type { RuleOperator, TargetingRule } from "@/lib/types";
 
 const OPERATORS: RuleOperator[] = ["equals", "not_equals", "contains", "in", "gt", "lt"];
@@ -25,35 +27,38 @@ export function FlagStateEditor({
   const [killSwitch, setKillSwitch] = useState(initialKillSwitch);
   const [rollout, setRollout] = useState(initialRollout);
   const [rules, setRules] = useState<TargetingRule[]>(initialRules);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const showToast = useToast();
+
+  const stateToken: RiskToken = killSwitch ? "halt" : enabled ? "clear" : "inert";
 
   function apply(input: Omit<Parameters<typeof updateFlagStateAction>[1], "environmentId">) {
-    setError(null);
-    setMessage(null);
     startTransition(async () => {
       const result = await updateFlagStateAction(flagId, { environmentId, ...input });
       if (!result.ok) {
-        setError(result.error ?? "Something went wrong");
+        showToast(result.error ?? "Something went wrong", "halt");
       } else if (result.approvalRequested) {
-        setMessage("Rollout increase exceeds the governance threshold — an approval request was created.");
+        showToast("Rollout increase exceeds the governance threshold — an approval request was created.");
       } else {
-        setMessage("Saved.");
+        showToast("Saved.");
       }
     });
   }
 
   return (
     <div className="space-y-6">
-      <div className="card flex items-center justify-between">
+      <div
+        key={`enabled-${stateToken}`}
+        className={`card flex animate-lift-settle items-center justify-between transition-colors duration-[400ms] ${riskSpineClass(stateToken)}`}
+      >
         <div>
-          <h3 className="font-semibold text-slate-900">Enabled</h3>
-          <p className="text-sm text-slate-500">Master switch for this environment.</p>
+          <h3 className="font-semibold text-ink">Enabled</h3>
+          <p className="text-sm text-slate">Master switch for this environment.</p>
         </div>
         <ToggleButton
           on={enabled}
           disabled={pending}
+          busy={pending}
           onClick={() => {
             const next = !enabled;
             setEnabled(next);
@@ -62,15 +67,19 @@ export function FlagStateEditor({
         />
       </div>
 
-      <div className="card flex items-center justify-between border-red-100">
+      <div
+        key={`kill-${stateToken}`}
+        className={`card flex animate-lift-settle items-center justify-between transition-colors duration-[400ms] ${riskSpineClass(stateToken)}`}
+      >
         <div>
-          <h3 className="font-semibold text-red-700">Kill switch</h3>
-          <p className="text-sm text-slate-500">Forces this flag off for everyone, instantly, regardless of rollout %.</p>
+          <h3 className="font-semibold text-risk-halt">Kill switch</h3>
+          <p className="text-sm text-slate">Forces this flag off for everyone, instantly, regardless of rollout %.</p>
         </div>
         <ToggleButton
           on={killSwitch}
           danger
           disabled={pending}
+          busy={pending}
           onClick={() => {
             const next = !killSwitch;
             setKillSwitch(next);
@@ -81,8 +90,8 @@ export function FlagStateEditor({
 
       <div className="card">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900">Rollout percentage</h3>
-          <span className="text-lg font-bold text-brand-600">{rollout}%</span>
+          <h3 className="font-semibold text-ink">Rollout percentage</h3>
+          <span className="font-mono text-lg font-bold text-brand">{rollout}%</span>
         </div>
         <input
           type="range"
@@ -90,14 +99,15 @@ export function FlagStateEditor({
           max={100}
           value={rollout}
           onChange={(e) => setRollout(Number(e.target.value))}
-          className="mt-3 w-full"
+          className="mt-3 w-full accent-brand"
         />
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate">
           Increases of 50 points or more, or reaching 100%, require admin/owner approval.
         </p>
         <button
           className="btn-primary mt-3"
           disabled={pending || rollout === initialRollout}
+          aria-busy={pending}
           onClick={() => apply({ rolloutPercentage: rollout })}
         >
           Apply rollout change
@@ -105,8 +115,8 @@ export function FlagStateEditor({
       </div>
 
       <div className="card">
-        <h3 className="font-semibold text-slate-900">Targeting rules</h3>
-        <p className="text-sm text-slate-500">
+        <h3 className="font-semibold text-ink">Targeting rules</h3>
+        <p className="text-sm text-slate">
           Users matching any rule below are always on, before rollout percentage is considered.
         </p>
         <div className="mt-4 space-y-3">
@@ -170,6 +180,7 @@ export function FlagStateEditor({
           <button
             className="btn-primary"
             disabled={pending}
+            aria-busy={pending}
             onClick={() =>
               apply({
                 targetingRules: rules
@@ -182,9 +193,6 @@ export function FlagStateEditor({
           </button>
         </div>
       </div>
-
-      {message && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{message}</p>}
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
     </div>
   );
 }
@@ -194,19 +202,22 @@ function ToggleButton({
   onClick,
   disabled,
   danger,
+  busy,
 }: {
   on: boolean;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
+  busy?: boolean;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
+      aria-busy={busy}
       onClick={onClick}
-      className={`relative h-7 w-12 rounded-full transition-colors ${
-        on ? (danger ? "bg-red-600" : "bg-brand-600") : "bg-slate-300"
+      className={`relative h-7 w-12 rounded-full transition-colors duration-150 ${
+        on ? (danger ? "bg-risk-halt" : "bg-brand") : "bg-rule"
       } disabled:opacity-50`}
     >
       <span

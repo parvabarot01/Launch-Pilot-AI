@@ -2,20 +2,10 @@ import { redirect } from "next/navigation";
 import { readDb } from "@/lib/db";
 import { requireViewerContext, requireRole } from "@/lib/context";
 import { ApprovalActions } from "@/components/ApprovalActions";
-
-const RISK_STYLES: Record<string, string> = {
-  low: "bg-green-50 text-green-700",
-  medium: "bg-amber-50 text-amber-700",
-  high: "bg-orange-50 text-orange-700",
-  critical: "bg-red-50 text-red-700",
-};
-
-function riskLevel(score: number) {
-  if (score >= 75) return "critical";
-  if (score >= 50) return "high";
-  if (score >= 25) return "medium";
-  return "low";
-}
+import { toRiskLevel } from "@/lib/governance";
+import { riskSpineClass, toRegisterToken, RISK_TEXT } from "@/lib/risk";
+import { RiskDots } from "@/components/RiskSpine";
+import { StaggerRow } from "@/components/StaggerRows";
 
 export default async function GovernancePage() {
   const ctx = await requireViewerContext();
@@ -38,29 +28,29 @@ export default async function GovernancePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Release governance</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-page-title text-ink">Release governance</h1>
+        <p className="text-sm text-slate">
           Rollout increases of 50+ points, or reaching 100%, require admin/owner sign-off.
         </p>
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Pending approvals</h2>
-        {pending.length === 0 && <p className="text-sm text-slate-400">Nothing waiting on review.</p>}
+        <h2 className="text-section-head text-ink">Pending approvals</h2>
+        {pending.length === 0 && <p className="text-sm text-mute">Nothing waiting on review.</p>}
         {pending.map((a) => {
-          const level = riskLevel(a.riskScore);
+          const token = toRegisterToken(toRiskLevel(a.riskScore));
           return (
-            <div key={a.id} className="card flex items-start justify-between">
+            <div key={a.id} className={`card flex items-start justify-between ${riskSpineClass(token)}`}>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-slate-900">{flagName(a.flagId)}</h3>
-                  <span className={`badge ${RISK_STYLES[level]}`}>risk: {a.riskScore}/100 ({level})</span>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-semibold text-ink">{flagName(a.flagId)}</h3>
+                  <RiskDots token={token} score={a.riskScore} />
                 </div>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate">
                   {a.fromRolloutPercentage}% → {a.toRolloutPercentage}% · requested by {a.requestedByName}
                 </p>
                 {a.riskFactors.length > 0 && (
-                  <ul className="mt-2 list-inside list-disc text-xs text-slate-500">
+                  <ul className="mt-2 list-inside list-disc text-xs text-mute">
                     {a.riskFactors.map((f, i) => (
                       <li key={i}>{f}</li>
                     ))}
@@ -70,7 +60,7 @@ export default async function GovernancePage() {
               {canDecide ? (
                 <ApprovalActions approvalId={a.id} />
               ) : (
-                <span className="text-xs text-slate-400">Awaiting admin/owner</span>
+                <span className="text-xs text-mute">Awaiting admin/owner</span>
               )}
             </div>
           );
@@ -78,36 +68,43 @@ export default async function GovernancePage() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Recent decisions</h2>
-        {decided.length === 0 && <p className="text-sm text-slate-400">No decisions yet.</p>}
-        <div className="card overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-slate-500">
-              <tr>
-                <th className="pb-3">Flag</th>
-                <th className="pb-3">Change</th>
-                <th className="pb-3">Risk</th>
-                <th className="pb-3">Status</th>
-                <th className="pb-3">Reviewed by</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {decided.map((a) => (
-                <tr key={a.id}>
-                  <td className="py-3">{flagName(a.flagId)}</td>
-                  <td className="py-3">
-                    {a.fromRolloutPercentage}% → {a.toRolloutPercentage}%
-                  </td>
-                  <td className="py-3">{a.riskScore}/100</td>
-                  <td className="py-3">
-                    <span className={a.status === "approved" ? "text-green-700" : "text-red-700"}>{a.status}</span>
-                  </td>
-                  <td className="py-3">{a.reviewedByName}</td>
+        <h2 className="text-section-head text-ink">Recent decisions</h2>
+        {decided.length === 0 && <p className="text-sm text-mute">No decisions yet.</p>}
+        {decided.length > 0 && (
+          <div className="card overflow-x-auto overflow-y-hidden !p-0">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-wash text-eyebrow uppercase text-mute">
+                <tr>
+                  <th className="px-6 py-3 font-semibold">Flag</th>
+                  <th className="px-6 py-3 font-semibold">Change</th>
+                  <th className="px-6 py-3 font-semibold">Risk</th>
+                  <th className="px-6 py-3 font-semibold">Status</th>
+                  <th className="px-6 py-3 font-semibold">Reviewed by</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {decided.map((a, i) => {
+                  const token = toRegisterToken(toRiskLevel(a.riskScore));
+                  return (
+                    <StaggerRow as="tr" key={a.id} index={i} className="h-11 transition-colors duration-150 hover:bg-wash">
+                      <td className={`px-6 py-3 font-medium text-ink ${riskSpineClass(token)}`}>{flagName(a.flagId)}</td>
+                      <td className="px-6 py-3 font-mono text-data">
+                        {a.fromRolloutPercentage}% → {a.toRolloutPercentage}%
+                      </td>
+                      <td className="px-6 py-3">
+                        <RiskDots token={token} score={a.riskScore} />
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className={a.status === "approved" ? RISK_TEXT.clear : RISK_TEXT.halt}>{a.status}</span>
+                      </td>
+                      <td className="px-6 py-3 text-slate">{a.reviewedByName}</td>
+                    </StaggerRow>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

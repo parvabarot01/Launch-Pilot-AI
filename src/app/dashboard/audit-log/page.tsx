@@ -3,6 +3,9 @@ import { readDb } from "@/lib/db";
 import { requireViewerContext } from "@/lib/context";
 import { filterAuditLog } from "@/lib/exports";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit";
+import { auditActionToken, riskSpineClass } from "@/lib/risk";
+import { EmptyState } from "@/components/EmptyState";
+import { StaggerRow } from "@/components/StaggerRows";
 import type { AuditLogEntry } from "@/lib/types";
 
 export default async function AuditLogPage({
@@ -31,8 +34,8 @@ export default async function AuditLogPage({
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Audit log</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-page-title text-ink">Audit log</h1>
+          <p className="text-sm text-slate">
             Every governance-sensitive change, in order, for this organization — the compliance/change-log record.
           </p>
         </div>
@@ -68,44 +71,46 @@ export default async function AuditLogPage({
           Filter
         </button>
         {(action || entityType) && (
-          <a href="/dashboard/audit-log" className="text-sm text-slate-500 hover:underline">
+          <a href="/dashboard/audit-log" className="text-sm text-slate hover:underline">
             Clear filters
           </a>
         )}
       </form>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-slate-500">
-            <tr>
-              <th className="pb-3">When</th>
-              <th className="pb-3">Actor</th>
-              <th className="pb-3">Action</th>
-              <th className="pb-3">Entity</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {entries.map((e) => (
-              <tr key={e.id}>
-                <td className="py-3 whitespace-nowrap text-slate-500">{new Date(e.createdAt).toLocaleString()}</td>
-                <td className="py-3">{e.actorName}</td>
-                <td className="py-3 font-medium text-slate-900">{e.action}</td>
-                <td className="py-3 text-slate-500">
-                  {e.entityType} · {e.entityId}
-                </td>
-              </tr>
-            ))}
-            {entries.length === 0 && (
+      <div className="card overflow-x-auto overflow-y-hidden !p-0">
+        {entries.length === 0 ? (
+          <EmptyState title="No audit events match these filters." chrome="oversee" />
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="bg-wash text-eyebrow uppercase text-mute">
               <tr>
-                <td colSpan={4} className="py-8 text-center text-slate-400">
-                  No audit events match these filters.
-                </td>
+                <th className="px-6 py-3 font-semibold">When</th>
+                <th className="px-6 py-3 font-semibold">Actor</th>
+                <th className="px-6 py-3 font-semibold">Action</th>
+                <th className="px-6 py-3 font-semibold">Entity</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-rule">
+              {entries.map((e, i) => {
+                const token = auditActionToken(e.action);
+                return (
+                  <StaggerRow as="tr" key={e.id} index={i} className="h-11 transition-colors duration-150 hover:bg-wash">
+                    <td className={`whitespace-nowrap px-6 py-3 font-mono text-data text-slate ${token ? riskSpineClass(token) : ""}`}>
+                      {new Date(e.createdAt).toLocaleString("en-US")}
+                    </td>
+                    <td className="px-6 py-3">{e.actorName}</td>
+                    <td className="px-6 py-3 font-medium text-ink">{e.action}</td>
+                    <td className="px-6 py-3 text-slate">
+                      {e.entityType} · {e.entityId}
+                    </td>
+                  </StaggerRow>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
         {entries.length === 200 && (
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="p-4 text-xs text-mute">
             Showing the most recent 200 matching entries. Use Export CSV for the full record.
           </p>
         )}

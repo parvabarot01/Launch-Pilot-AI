@@ -4,13 +4,13 @@ import { AuthForm } from "@/components/AuthForm";
 
 export default function SignupPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
+    <div className="flex min-h-screen items-center justify-center bg-wash px-6">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <Link href="/" className="text-lg font-semibold tracking-tight text-slate-900">
+          <Link href="/" className="text-lg font-semibold tracking-tight text-ink">
             LaunchPilot
           </Link>
-          <h1 className="mt-2 text-2xl font-bold text-slate-900">Create your account</h1>
+          <h1 className="mt-2 text-page-title text-ink">Create your account</h1>
         </div>
         <div className="card">
           <AuthForm
@@ -24,10 +24,15 @@ export default function SignupPage() {
             ]}
           />
         </div>
-        <p className="mt-4 text-center text-sm text-slate-500">
+        <p className="mt-4 text-center text-sm text-slate">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-brand-600">
+          <Link href="/login" className="font-medium text-brand">
             Log in
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-xs text-mute">
+          <Link href="/how-it-works" className="hover:text-slate hover:underline">
+            How it works
           </Link>
         </p>
       </div>

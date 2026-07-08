@@ -4,40 +4,139 @@
 
 :root {
   color-scheme: light;
+
+  /* Neutrals — the stage */
+  --ink: #0b0f19;
+  --slate: #5a6478;
+  --mute: #8892a4;
+  --rule: #e4e7ee;
+  --surface: #ffffff;
+  --wash: #f7f8fa;
+
+  /* Risk register — monopoly, four colors, never decorative */
+  --risk-clear: #0e8a5f;
+  --risk-clear-wash: rgba(14, 138, 95, 0.08);
+  --risk-watch: #b4690e;
+  --risk-watch-wash: rgba(180, 105, 14, 0.08);
+  --risk-halt: #c0392b;
+  --risk-halt-wash: rgba(192, 57, 43, 0.08);
+  --risk-inert: #8892a4;
+  --risk-inert-wash: rgba(136, 146, 164, 0.08);
+
+  /* Chrome spectrum — orientation & warmth */
+  --brand: #3660f0;
+  --brand-wash: #eef2fe;
+  --chrome-ship: #4f46e5;
+  --chrome-oversee: #7c3aed;
+  --chrome-ask: #0ea5a5;
+
+  /* Environment identity — the safety color */
+  --env-dev: #0ea5a5;
+  --env-staging: #8b5cf6;
+  --env-prod: #334155;
+
+  /* Identity palette — recognition (hash(id) % 6) */
+  --id-coral: #e85d4e;
+  --id-coral-wash: rgba(232, 93, 78, 0.08);
+  --id-coral-deep: #c23f31;
+  --id-violet: #8b5cf6;
+  --id-violet-wash: rgba(139, 92, 246, 0.08);
+  --id-violet-deep: #6d3fd1;
+  --id-teal: #0ea5a5;
+  --id-teal-wash: rgba(14, 165, 165, 0.08);
+  --id-teal-deep: #0a7a7a;
+  --id-gold: #d9a400;
+  --id-gold-wash: rgba(217, 164, 0, 0.08);
+  --id-gold-deep: #a97e00;
+  --id-sky: #2e9bd6;
+  --id-sky-wash: rgba(46, 155, 214, 0.08);
+  --id-sky-deep: #1f76a8;
+  --id-plum: #b0538c;
+  --id-plum-wash: rgba(176, 83, 140, 0.08);
+  --id-plum-deep: #8a3d6d;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ink: #f2f4f8;
+  --slate: #b6bece;
+  --mute: #7c8496;
+  --rule: #232838;
+  --surface: #101521;
+  --wash: #0b0f19;
+
+  --risk-clear: #22b57e;
+  --risk-clear-wash: rgba(34, 181, 126, 0.14);
+  --risk-watch: #d68a2e;
+  --risk-watch-wash: rgba(214, 138, 46, 0.14);
+  --risk-halt: #e0574a;
+  --risk-halt-wash: rgba(224, 87, 74, 0.14);
+  --risk-inert: #8892a4;
+  --risk-inert-wash: rgba(136, 146, 164, 0.14);
+
+  --brand: #6d8bf5;
+  --brand-wash: #1a2242;
+
+  --id-coral: #f17d70;
+  --id-violet: #a480f9;
+  --id-teal: #2ec2c2;
+  --id-gold: #eec24a;
+  --id-sky: #5cb3e6;
+  --id-plum: #cd7bb0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  /* opacity and color/border transitions remain — only spatial motion is killed */
+  .motion-safe-only {
+    transition-property: opacity, color, background-color, border-color !important;
+  }
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-wash text-ink;
 }
 
 .card {
-  @apply rounded-xl border border-slate-200 bg-white p-6 shadow-sm;
+  @apply rounded-card border border-rule bg-surface p-6 shadow-hairline;
 }
 
 .btn {
-  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center rounded-control px-4 py-2 text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  @apply btn bg-brand text-white hover:bg-brand-700 active:translate-y-px;
 }
 
 .btn-secondary {
-  @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+  @apply btn border border-rule bg-surface text-ink hover:bg-wash active:translate-y-px;
 }
 
 .btn-danger {
-  @apply btn bg-red-600 text-white hover:bg-red-700;
+  @apply btn border border-risk-halt bg-transparent text-risk-halt hover:bg-risk-halt-wash active:translate-y-px;
 }
 
 .input {
-  @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500;
+  @apply w-full rounded-control border border-rule bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand focus:ring-1 focus:ring-brand;
 }
 
 .label {
-  @apply mb-1 block text-sm font-medium text-slate-700;
+  @apply mb-1 block text-sm font-medium text-slate;
 }
 
 .badge {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  @apply inline-flex items-center rounded-full bg-wash px-2.5 py-0.5 text-eyebrow uppercase text-slate;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }

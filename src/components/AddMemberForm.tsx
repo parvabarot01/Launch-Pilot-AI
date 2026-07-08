@@ -33,10 +33,10 @@ export function AddMemberForm() {
           <option value="admin">Admin</option>
         </select>
       </div>
-      <button type="submit" className="btn-primary" disabled={pending}>
+      <button type="submit" className="btn-primary" disabled={pending} aria-busy={pending}>
         {pending ? "Adding…" : "Add member"}
       </button>
-      {error && <p className="w-full text-sm text-red-600">{error}</p>}
+      {error && <p className="w-full text-sm text-risk-halt">{error}</p>}
     </form>
   );
 }

@@ -44,9 +44,9 @@ export function AuthForm({
         </div>
       ))}
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-control bg-risk-halt-wash px-3 py-2 text-sm text-risk-halt">{error}</p>
       )}
-      <button type="submit" className="btn-primary w-full" disabled={pending}>
+      <button type="submit" className="btn-primary w-full" disabled={pending} aria-busy={pending}>
         {pending ? "Please wait…" : submitLabel}
       </button>
     </form>

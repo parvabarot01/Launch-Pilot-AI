@@ -63,7 +63,10 @@ export default function LandingPage() {
             </div>
             <span className="text-lg font-semibold tracking-tight">LaunchPilot</span>
           </div>
-          <nav className="flex items-center gap-3">
+          <nav className="flex items-center gap-4">
+            <Link href="/how-it-works" className="text-sm text-slate-600 hover:text-slate-900">
+              How it works
+            </Link>
             <Link href="/login" className="btn-secondary">
               Log in
             </Link>

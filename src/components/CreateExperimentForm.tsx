@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createExperimentAction } from "@/app/actions/experiments";
+import { getVariantBg } from "@/lib/identity-color";
 import type { FeatureFlag } from "@/lib/types";
 
 interface VariantDraft {
@@ -80,7 +81,11 @@ export function CreateExperimentForm({
         <label className="label">Variants (allocation must total 100%)</label>
         <div className="space-y-2">
           {variants.map((v, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2">
+            <div key={i} className="grid grid-cols-12 items-center gap-2">
+              <span
+                className={`col-span-1 h-2.5 w-2.5 justify-self-center rounded-full ${getVariantBg(name || "new-experiment", i)}`}
+                aria-hidden="true"
+              />
               <input
                 className="input col-span-3"
                 placeholder="key"
@@ -92,7 +97,7 @@ export function CreateExperimentForm({
                 }}
               />
               <input
-                className="input col-span-4"
+                className="input col-span-3"
                 placeholder="name"
                 value={v.name}
                 onChange={(e) => {
@@ -144,12 +149,13 @@ export function CreateExperimentForm({
         </button>
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-control bg-risk-halt-wash px-3 py-2 text-sm text-risk-halt">{error}</p>}
 
       <div className="flex gap-2">
         <button
           className="btn-primary"
           disabled={pending}
+          aria-busy={pending}
           onClick={() =>
             startTransition(async () => {
               setError(null);

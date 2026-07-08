@@ -13,6 +13,7 @@ export function ApprovalActions({ approvalId }: { approvalId: string }) {
         <button
           className="btn-primary text-xs"
           disabled={pending}
+          aria-busy={pending}
           onClick={() =>
             startTransition(async () => {
               const result = await decideApprovalAction(approvalId, "approved");
@@ -25,6 +26,7 @@ export function ApprovalActions({ approvalId }: { approvalId: string }) {
         <button
           className="btn-danger text-xs"
           disabled={pending}
+          aria-busy={pending}
           onClick={() =>
             startTransition(async () => {
               const result = await decideApprovalAction(approvalId, "rejected");
@@ -35,7 +37,7 @@ export function ApprovalActions({ approvalId }: { approvalId: string }) {
           Reject
         </button>
       </div>
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-risk-halt">{error}</span>}
     </div>
   );
 }

@@ -48,10 +48,10 @@ export function CreateFlagForm() {
           <textarea name="description" className="input" rows={2} />
         </div>
         {error && (
-          <p className="sm:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          <p className="sm:col-span-2 rounded-control bg-risk-halt-wash px-3 py-2 text-sm text-risk-halt">{error}</p>
         )}
         <div className="flex gap-2 sm:col-span-2">
-          <button type="submit" className="btn-primary" disabled={pending}>
+          <button type="submit" className="btn-primary" disabled={pending} aria-busy={pending}>
             {pending ? "Creating…" : "Create flag"}
           </button>
           <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>

@@ -2,8 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { readDb } from "@/lib/db";
 import { requireViewerContext } from "@/lib/context";
-import { computeRiskScore } from "@/lib/governance";
+import { computeRiskScore, toRiskLevel } from "@/lib/governance";
 import { analyzeExperiment } from "@/lib/ai";
+import { riskSpineClass, toRegisterToken } from "@/lib/risk";
+import { RiskDots } from "@/components/RiskSpine";
+import { StatCard } from "@/components/StatCard";
+import { StaggerRow } from "@/components/StaggerRows";
+import { EmptyState } from "@/components/EmptyState";
+import { dailyBuckets } from "@/lib/timeseries";
+import { IDENTITY_BG, getIdentityToken } from "@/lib/identity-color";
 
 export default async function ExecutiveDashboardPage() {
   const ctx = await requireViewerContext();
@@ -15,9 +22,8 @@ export default async function ExecutiveDashboardPage() {
     (e) => e.orgId === ctx.org.id && e.environmentId === ctx.environment.id
   );
   const runningExperiments = experiments.filter((e) => e.status === "running");
-  const pendingApprovals = db.approvals.filter(
-    (a) => a.orgId === ctx.org.id && a.status === "pending"
-  );
+  const orgApprovals = db.approvals.filter((a) => a.orgId === ctx.org.id);
+  const pendingApprovals = orgApprovals.filter((a) => a.status === "pending");
 
   const releaseCalendar = flags
     .map((flag) => {
@@ -44,64 +50,98 @@ export default async function ExecutiveDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Executive summary</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-page-title text-ink">Executive summary</h1>
+        <p className="text-sm text-slate">
           {ctx.org.name} · <span className="capitalize">{ctx.environment.name}</span>
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <StatCard label="Active flags" value={flags.length} />
-        <StatCard label="Running experiments" value={runningExperiments.length} />
-        <StatCard label="Pending approvals" value={pendingApprovals.length} accent={pendingApprovals.length > 0} />
-        <StatCard label="Ready-to-ship winners" value={winners.length} accent={winners.length > 0} good />
+        <StatCard
+          label="Active flags"
+          value={flags.length}
+          href="/dashboard/flags"
+          token="inert"
+          sparkline={dailyBuckets(flags.map((f) => f.createdAt))}
+        />
+        <StatCard
+          label="Running experiments"
+          value={runningExperiments.length}
+          href="/dashboard/experiments"
+          token="inert"
+          sparkline={dailyBuckets(runningExperiments.map((e) => e.createdAt))}
+        />
+        <StatCard
+          label="Pending approvals"
+          value={pendingApprovals.length}
+          href="/dashboard/governance"
+          token={pendingApprovals.length > 0 ? "watch" : "inert"}
+          sparkline={dailyBuckets(orgApprovals.map((a) => a.createdAt))}
+          headline
+        />
+        <StatCard
+          label="Ready-to-ship winners"
+          value={winners.length}
+          href="/dashboard/experiments"
+          token={winners.length > 0 ? "clear" : "inert"}
+        />
       </div>
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Risk-scored release calendar</h2>
-        <div className="card overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-slate-500">
-              <tr>
-                <th className="pb-3">Flag</th>
-                <th className="pb-3">Rollout</th>
-                <th className="pb-3">Risk score</th>
-                <th className="pb-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {releaseCalendar.map(({ flag, state, risk }) => (
-                <tr key={flag.id}>
-                  <td className="py-3 font-medium text-slate-900">{flag.name}</td>
-                  <td className="py-3">{state.rolloutPercentage}%</td>
-                  <td className="py-3">{risk.score}/100 ({risk.level})</td>
-                  <td className="py-3 text-right">
-                    <Link href={`/dashboard/flags/${flag.id}`} className="text-brand-600 hover:underline">
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {releaseCalendar.length === 0 && (
+        <h2 className="mb-3 text-section-head text-ink">Risk-scored release calendar</h2>
+        <div className="card overflow-x-auto overflow-y-hidden !p-0">
+          {releaseCalendar.length === 0 ? (
+            <EmptyState title="No active rollouts in this environment." chrome="oversee" />
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-wash text-eyebrow uppercase text-mute">
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-400">
-                    No active rollouts in this environment.
-                  </td>
+                  <th className="px-6 py-3 font-semibold">Flag</th>
+                  <th className="px-6 py-3 font-semibold">Rollout</th>
+                  <th className="px-6 py-3 font-semibold">Risk</th>
+                  <th className="px-6 py-3" />
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {releaseCalendar.map(({ flag, state, risk }, i) => {
+                  const token = toRegisterToken(toRiskLevel(risk.score));
+                  return (
+                    <StaggerRow as="tr" key={flag.id} index={i} className="h-11 transition-colors duration-150 hover:bg-wash">
+                      <td className={`px-6 py-3 font-medium text-ink ${riskSpineClass(token)}`}>{flag.name}</td>
+                      <td className="px-6 py-3 font-mono text-data">{state.rolloutPercentage}%</td>
+                      <td className="px-6 py-3">
+                        <RiskDots token={token} score={risk.score} />
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <Link href={`/dashboard/flags/${flag.id}`} className="text-brand hover:underline">
+                          View
+                        </Link>
+                      </td>
+                    </StaggerRow>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
       {winners.length > 0 && (
         <div>
-          <h2 className="mb-3 text-lg font-semibold text-slate-900">Ready to ship</h2>
+          <h2 className="mb-3 text-section-head text-ink">Ready to ship</h2>
           <div className="grid gap-3">
-            {winners.map((w) => (
-              <Link key={w.experiment.id} href={`/dashboard/experiments/${w.experiment.id}`} className="card block hover:border-brand-300">
-                <span className="font-medium text-slate-900">{w.experiment.name}</span>
-                <span className="ml-2 text-sm text-green-700">
+            {winners.map((w, i) => (
+              <Link
+                key={w.experiment.id}
+                href={`/dashboard/experiments/${w.experiment.id}`}
+                className={`card block animate-fade-in-up hover:border-brand-300 ${riskSpineClass("clear")}`}
+                style={{ animationDelay: `${Math.min(i, 12) * 20}ms` }}
+              >
+                <span className="inline-flex items-center gap-2 font-medium text-ink">
+                  <span className={`h-2 w-2 rounded-full ${IDENTITY_BG[getIdentityToken(w.experiment.id)]}`} aria-hidden="true" />
+                  {w.experiment.name}
+                </span>
+                <span className="ml-2 font-mono text-sm text-risk-clear">
                   {w.winner?.variantName} +{((w.winner?.liftVsControl ?? 0) * 100).toFixed(1)}%
                 </span>
               </Link>
@@ -109,17 +149,6 @@ export default async function ExecutiveDashboardPage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, accent, good }: { label: string; value: number; accent?: boolean; good?: boolean }) {
-  return (
-    <div className="card">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className={`mt-1 text-3xl font-bold ${accent ? (good ? "text-green-600" : "text-amber-600") : "text-slate-900"}`}>
-        {value}
-      </p>
     </div>
   );
 }

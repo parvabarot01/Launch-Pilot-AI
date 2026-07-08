@@ -29,8 +29,8 @@ export function ApiKeyDisplay({
   if (apiKey === null) {
     return (
       <div className="flex items-center gap-2">
-        <code className="rounded bg-slate-100 px-2 py-1 text-xs">{"•".repeat(26)}{lastFour}</code>
-        <span className="text-xs text-slate-400">Ask an admin to view or rotate this key</span>
+        <code className="rounded bg-wash px-2 py-1 font-mono text-xs">{"•".repeat(26)}{lastFour}</code>
+        <span className="text-xs text-mute">Ask an admin to view or rotate this key</span>
       </div>
     );
   }
@@ -38,14 +38,14 @@ export function ApiKeyDisplay({
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
-        <code className="rounded bg-slate-100 px-2 py-1 text-xs">
+        <code className="rounded bg-wash px-2 py-1 font-mono text-xs">
           {revealed ? apiKey : `${apiKey.slice(0, 6)}${"•".repeat(24)}`}
         </code>
-        <button className="text-xs text-brand-600 hover:underline" onClick={() => setRevealed((r) => !r)}>
+        <button className="text-xs text-brand hover:underline" onClick={() => setRevealed((r) => !r)}>
           {revealed ? "Hide" : "Reveal"}
         </button>
         <button
-          className="text-xs text-brand-600 hover:underline"
+          className="text-xs text-brand hover:underline"
           onClick={async () => {
             await navigator.clipboard.writeText(apiKey);
             setCopied(true);
@@ -56,8 +56,9 @@ export function ApiKeyDisplay({
         </button>
         {canRegenerate && (
           <button
-            className="text-xs text-red-600 hover:underline"
+            className="text-xs text-risk-halt hover:underline"
             disabled={pending}
+            aria-busy={pending}
             onClick={() => {
               if (
                 !confirm(
@@ -78,7 +79,7 @@ export function ApiKeyDisplay({
           </button>
         )}
       </div>
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-risk-halt">{error}</span>}
     </div>
   );
 }

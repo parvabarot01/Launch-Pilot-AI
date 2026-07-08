@@ -51,13 +51,14 @@ export function computeRiskScore(input: RiskInput): RiskAssessment {
 
   score = Math.min(100, Math.round(score));
 
-  let level: RiskAssessment["level"];
-  if (score >= 75) level = "critical";
-  else if (score >= 50) level = "high";
-  else if (score >= 25) level = "medium";
-  else level = "low";
+  return { score, level: toRiskLevel(score), factors };
+}
 
-  return { score, level, factors };
+export function toRiskLevel(score: number): RiskAssessment["level"] {
+  if (score >= 75) return "critical";
+  if (score >= 50) return "high";
+  if (score >= 25) return "medium";
+  return "low";
 }
 
 export function requiresApproval(fromPercentage: number, toPercentage: number): boolean {
