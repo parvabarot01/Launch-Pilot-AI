@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Feature flags, experimentation, and release governance in one platform.",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
