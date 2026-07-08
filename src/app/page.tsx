@@ -54,17 +54,17 @@ const PERSONAS = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-slate-100">
+    <div className="min-h-screen bg-surface">
+      <header className="border-b border-rule">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">
               LP
             </div>
-            <span className="text-lg font-semibold tracking-tight">LaunchPilot</span>
+            <span className="text-lg font-semibold tracking-tight text-ink">LaunchPilot</span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link href="/how-it-works" className="text-sm text-slate-600 hover:text-slate-900">
+            <Link href="/how-it-works" className="text-sm text-slate hover:text-ink">
               How it works
             </Link>
             <Link href="/login" className="btn-secondary">
@@ -79,13 +79,13 @@ export default function LandingPage() {
 
       <section className="mx-auto max-w-6xl px-6 pb-20 pt-16 sm:pt-24">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="badge bg-brand-50 text-brand-700">
+          <span className="badge bg-brand-wash text-brand">
             Flags · Experiments · Release governance — one platform
           </span>
-          <h1 className="mt-6 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-ink sm:text-5xl">
             Ship faster, with the safety net built in.
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-slate">
             LaunchPilot unifies feature flags, gradual rollouts, A/B testing, and
             statistically-grounded recommendations so your team doesn&apos;t have to
             stitch together a flag tool, an analytics tool, and a manual stats
@@ -99,19 +99,19 @@ export default function LandingPage() {
               I already have an account
             </Link>
           </div>
-          <p className="mt-4 text-sm text-slate-400">
+          <p className="mt-4 text-sm text-mute">
             No credit card. Runs on your own free-tier infrastructure.
           </p>
         </div>
       </section>
 
-      <section className="border-y border-slate-100 bg-slate-50 py-16">
+      <section className="border-y border-rule bg-wash py-16">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-10 text-center">
-            <h2 className="text-2xl font-bold text-slate-900">
+            <h2 className="text-2xl font-bold text-ink">
               The problem with the usual setup
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+            <p className="mx-auto mt-3 max-w-2xl text-slate">
               Most teams run a feature-flag tool, a separate A/B testing product, and a
               spreadsheet or a Slack thread to decide whether a result is real. Each
               handoff between those tools is where risk and slowdowns creep in.
@@ -121,8 +121,8 @@ export default function LandingPage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <div key={f.title} className="card">
-                <h3 className="font-semibold text-slate-900">{f.title}</h3>
-                <p className="mt-2 text-sm text-slate-600">{f.description}</p>
+                <h3 className="font-semibold text-ink">{f.title}</h3>
+                <p className="mt-2 text-sm text-slate">{f.description}</p>
               </div>
             ))}
           </div>
@@ -132,23 +132,23 @@ export default function LandingPage() {
       <section className="py-16">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-10 text-center">
-            <h2 className="text-2xl font-bold text-slate-900">Built for the whole team</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+            <h2 className="text-2xl font-bold text-ink">Built for the whole team</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-slate">
               Every role touching a release gets the view they actually need.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {PERSONAS.map((p) => (
-              <div key={p.role} className="rounded-xl border border-slate-200 p-5">
-                <h3 className="font-semibold text-slate-900">{p.role}</h3>
-                <p className="mt-2 text-sm text-slate-600">{p.need}</p>
+              <div key={p.role} className="rounded-xl border border-rule p-5">
+                <h3 className="font-semibold text-ink">{p.role}</h3>
+                <p className="mt-2 text-sm text-slate">{p.need}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-brand-950 py-16 text-white">
+      <section className="border-t border-rule bg-brand-950 py-16 text-white">
         <div className="mx-auto max-w-4xl px-6 text-center">
           <h2 className="text-2xl font-bold">The full loop, end to end</h2>
           <p className="mx-auto mt-4 max-w-2xl text-brand-100">
@@ -162,8 +162,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-100 py-8">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-sm text-slate-400">
+      <footer className="border-t border-rule py-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-sm text-mute">
           <span>© {new Date().getFullYear()} LaunchPilot</span>
           <span>Feature flags · Experiments · Release governance</span>
         </div>
